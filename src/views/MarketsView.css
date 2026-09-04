@@ -1,0 +1,33 @@
+/* src/views/MarketsView.css */
+.markets-layout {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  min-height: 0;
+  overflow-y: auto;
+}
+.markets-top {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 14px;
+  min-height: 420px;
+  flex: 1.5;
+}
+.markets-bottom {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 14px;
+  min-height: 380px;
+  flex: 1.2;
+}
+.markets-chart      { min-height: 0; height: 100%; overflow: hidden; }
+.markets-orderbook  { min-height: 0; height: 100%; overflow: hidden; }
+.markets-watchlist  { min-height: 0; height: 100%; overflow: hidden; }
+.markets-trade      { min-height: 0; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+
+@media (max-width: 1024px) {
+  .markets-top    { grid-template-columns: 1fr; }
+  .markets-bottom { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,33 @@
+/* src/components/panels/OrderBookPanel.css */
+.orderbook-card { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.ob-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.ob-col-header {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  padding: 6px 12px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.ob-asks, .ob-bids { flex: 1; }
+.ob-row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  padding: 4px 12px; position: relative;
+  align-items: center;
+  transition: background var(--transition-fast);
+}
+.ob-row:hover { background: rgba(255,255,255,0.04); }
+.ob-depth-bar {
+  position: absolute; top: 0; bottom: 0; right: 0;
+  opacity: 0.15; pointer-events: none;
+  border-radius: 2px 0 0 2px;
+  transition: width 0.3s ease;
+}
+.ob-ask-bar { background: var(--red); }
+.ob-bid-bar { background: var(--green); }
+.ob-price { font-size: 12px; font-weight: 600; }
+.ob-size, .ob-total { font-size: 11px; color: var(--text-muted); }
+.ob-mid {
+  display: flex; align-items: center; gap: 8px; justify-content: center;
+  padding: 10px; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);
+  background: rgba(0,0,0,0.15);
+}

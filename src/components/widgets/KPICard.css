@@ -1,0 +1,56 @@
+/* src/components/widgets/KPICard.css */
+.kpi-card {
+  padding: 18px 20px 14px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.kpi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.kpi-title {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.kpi-icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+}
+.kpi-value-row {
+  display: flex; align-items: baseline; gap: 2px;
+}
+.kpi-prefix { font-size: 16px; color: var(--text-secondary); font-weight: 500; }
+.kpi-value  {
+  font-size: 28px; font-weight: 800; color: var(--text-primary);
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+.kpi-suffix { font-size: 14px; color: var(--text-secondary); margin-left: 2px; }
+.kpi-change {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 600;
+}
+.kpi-arrow { font-size: 9px; }
+.kpi-change-abs { color: var(--text-muted); font-size: 11px; font-weight: 400; margin-left: 2px; }
+.kpi-accent-bar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 2px; opacity: 0.7;
+}
+
+/* Hover glow using CSS variable */
+.kpi-card:hover {
+  box-shadow: var(--shadow-card), 0 0 20px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+.kpi-clickable {
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+.kpi-clickable:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}

@@ -1,0 +1,4 @@
+/* src/components/panels/WatchlistPanel.css */
+.watchlist-card { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.watchlist-scroll { flex: 1; overflow-y: auto; }
+.inst-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }

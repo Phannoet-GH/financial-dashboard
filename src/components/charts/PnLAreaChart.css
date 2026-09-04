@@ -1,0 +1,9 @@
+/* src/components/charts/PnLAreaChart.css */
+.pnl-card { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.pnl-current { padding: 8px 16px 4px; }
+.pnl-chart-wrap { flex: 1; min-height: 0; padding: 0 4px 8px; height: 140px; }
+.pnl-change-badge {
+  padding: 3px 10px; border-radius: 99px;
+  font-size: 12px; font-weight: 700;
+  font-family: var(--font-mono);
+}

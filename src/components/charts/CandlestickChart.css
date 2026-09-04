@@ -1,0 +1,43 @@
+/* src/components/charts/CandlestickChart.css */
+.candlestick-root {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+  min-height: 0;
+}
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.chart-header-left {
+  display: flex; align-items: center; gap: 14px;
+}
+.chart-header-right {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.symbol-select {
+  min-width: 200px; max-width: 260px;
+}
+.chart-price-group {
+  display: flex; align-items: baseline; gap: 8px;
+}
+.chart-current-price {
+  font-size: 22px; font-weight: 700; color: var(--text-primary);
+}
+.chart-change {
+  font-size: 13px; font-weight: 600;
+}
+.ohlc-row {
+  display: flex; gap: 14px; font-size: 11px; color: var(--text-muted);
+}
+.ohlc-row b { font-weight: 600; color: var(--text-secondary); }
+.chart-container {
+  flex: 1; min-height: 0; width: 100%;
+}

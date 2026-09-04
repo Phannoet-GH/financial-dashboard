@@ -1,0 +1,41 @@
+/* src/views/OverviewView.css */
+.overview-layout {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  flex-shrink: 0;
+}
+@media (max-width: 1200px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+}
+.overview-main {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+  min-height: 480px;
+}
+.overview-left {
+  display: flex; flex-direction: column; gap: 14px; min-height: 0;
+}
+.overview-right {
+  display: flex; flex-direction: column; gap: 14px; min-height: 0;
+}
+.overview-pnl  { flex: 1; min-height: 200px; }
+.overview-heatmap { min-height: 200px; }
+.overview-donut { min-height: 260px; }
+.overview-news  { flex: 1; min-height: 200px; }
+
+@media (max-width: 960px) {
+  .overview-main { grid-template-columns: 1fr; }
+}
