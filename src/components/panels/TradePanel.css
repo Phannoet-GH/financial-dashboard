@@ -221,3 +221,135 @@
   border-color: var(--border-medium);
 }
 
+/* Smart Signal Confluence Assistant in TradePanel */
+.trade-signal-card {
+  background: rgba(13, 17, 23, 0.7);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2px;
+  transition: all var(--transition-fast);
+}
+
+.trade-signal-card.signal-border-buy {
+  border-left: 3px solid var(--green);
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.05), rgba(13, 17, 23, 0.8));
+}
+
+.trade-signal-card.signal-border-sell {
+  border-left: 3px solid var(--red);
+  background: linear-gradient(135deg, rgba(255, 71, 87, 0.05), rgba(13, 17, 23, 0.8));
+}
+
+.trade-signal-card.signal-border-hold {
+  border-left: 3px solid var(--amber);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(13, 17, 23, 0.8));
+}
+
+.trade-signal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trade-signal-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.trade-signal-conf {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.trade-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+
+.trade-signal-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.signal-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.signal-value {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.signal-value small {
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.trade-signal-rationale {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.rationale-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--cyan);
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.btn-apply-signal-panel {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(99, 102, 241, 0.25));
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-apply-signal-panel:hover {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.35), rgba(99, 102, 241, 0.4));
+  border-color: rgba(0, 212, 255, 0.7);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.25);
+}
+

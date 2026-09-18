@@ -648,3 +648,187 @@
 .whale-qty {
   font-size: 10px;
 }
+
+/* Live Algorithmic Trading Signals Radar */
+.signals-radar-card {
+  padding: 16px;
+}
+
+.signals-radar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.signal-radar-item {
+  background: rgba(13, 17, 23, 0.7);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all var(--transition-fast);
+}
+
+.signal-radar-item:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-medium);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.signal-radar-item.signal-border-buy {
+  border-left: 3px solid var(--green);
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.04), rgba(13, 17, 23, 0.8));
+}
+
+.signal-radar-item.signal-border-sell {
+  border-left: 3px solid var(--red);
+  background: linear-gradient(135deg, rgba(255, 71, 87, 0.04), rgba(13, 17, 23, 0.8));
+}
+
+.signal-radar-item.signal-border-hold {
+  border-left: 3px solid var(--amber);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.04), rgba(13, 17, 23, 0.8));
+}
+
+.radar-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.radar-sym-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.radar-signal-badge-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.radar-conf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.radar-levels-box {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+.radar-level-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.level-lbl {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.level-val {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.level-val small {
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.radar-reason-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+.radar-reason-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--cyan);
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.radar-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.btn-radar-chart {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-radar-chart:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.btn-radar-trade {
+  flex: 1.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.25), rgba(99, 102, 241, 0.3));
+  border: 1px solid rgba(0, 212, 255, 0.45);
+  color: #fff;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-radar-trade:hover {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.4), rgba(99, 102, 241, 0.45));
+  border-color: rgba(0, 212, 255, 0.8);
+  box-shadow: 0 0 14px rgba(0, 212, 255, 0.3);
+}

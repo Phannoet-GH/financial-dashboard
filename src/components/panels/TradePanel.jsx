@@ -1,7 +1,9 @@
 // src/components/panels/TradePanel.jsx
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useMarket } from '../../context/MarketContext';
 import { ALL_INSTRUMENTS, formatPrice, getUnitLabel } from '../../data/instruments';
+import { calculateTradingSignal } from '../../data/marketSignals';
+import { Zap, ShieldCheck } from 'lucide-react';
 import './TradePanel.css';
 
 export default function TradePanel() {
@@ -16,7 +18,11 @@ export default function TradePanel() {
     pendingLimitOrders,
     addLimitOrder,
     cancelLimitOrder,
-    portfolioStats
+    portfolioStats,
+    ohlcHistory,
+    marketFlowData,
+    tradeSignalPrefill,
+    setTradeSignalPrefill,
   } = useMarket();
 
   const [activeTab, setActiveTab] = useState('trade'); // 'trade' | 'pending'
@@ -78,6 +84,52 @@ export default function TradePanel() {
     const calculatedQty = maxNotional / p.price;
     setQty(selectedSymbol.includes('/') ? calculatedQty.toFixed(2) : calculatedQty < 1 ? calculatedQty.toFixed(4) : calculatedQty.toFixed(2));
   }
+
+  // Algorithmic Trading Signal for Current Symbol
+  const currentSignal = useMemo(() => {
+    return calculateTradingSignal(
+      selectedSymbol,
+      p,
+      ohlcHistory[selectedSymbol]?.['1m'] || [],
+      marketFlowData?.assetFlows?.[selectedSymbol]
+    );
+  }, [selectedSymbol, p, ohlcHistory, marketFlowData]);
+
+  // Apply signal levels to form inputs
+  const applySignalValues = useCallback((sig) => {
+    if (!sig) return;
+    setSide(sig.signal === 'SELL' ? 'sell' : 'buy');
+    setEnableTpSl(true);
+    setTakeProfit(String(sig.tp1));
+    setStopLoss(String(sig.stopLoss));
+
+    // Preset appropriate default quantity if empty
+    setQty(prev => {
+      if (!prev || parseFloat(prev) <= 0) {
+        if (selectedSymbol.includes('XAU')) return '1.0';
+        if (selectedSymbol.includes('XAG')) return '50';
+        if (selectedSymbol === 'BTC') return '0.25';
+        if (selectedSymbol === 'ETH') return '2';
+        if (selectedSymbol.includes('/')) return '1000';
+        return '10';
+      }
+      return prev;
+    });
+
+    setStatus({
+      ok: true,
+      msg: `Applied ${sig.signal} Signal (TP: $${sig.tp1} | SL: $${sig.stopLoss})`
+    });
+    setTimeout(() => setStatus(null), 3500);
+  }, [selectedSymbol]);
+
+  // Watch for external prefill requests (from Chart Ribbon or Radar)
+  useEffect(() => {
+    if (tradeSignalPrefill && tradeSignalPrefill.symbol === selectedSymbol) {
+      applySignalValues(tradeSignalPrefill);
+      setTradeSignalPrefill(null);
+    }
+  }, [tradeSignalPrefill, selectedSymbol, applySignalValues, setTradeSignalPrefill]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -273,6 +325,90 @@ export default function TradePanel() {
               <span className="text-mono fw-700" style={{ fontSize: 17, color: p.changePct >= 0 ? 'var(--green)' : 'var(--red)' }}>
                 {formatPrice(p.price, selectedSymbol)}
               </span>
+            </div>
+          )}
+
+          {/* Smart Signal Confluence Assistant */}
+          {currentSignal && (
+            <div className={`trade-signal-card signal-border-${currentSignal.signal.toLowerCase()}`}>
+              <div className="trade-signal-header">
+                <div className="trade-signal-title">
+                  <Zap
+                    size={14}
+                    style={{
+                      color:
+                        currentSignal.signal === 'BUY'
+                          ? 'var(--green)'
+                          : currentSignal.signal === 'SELL'
+                          ? 'var(--red)'
+                          : 'var(--amber)',
+                    }}
+                  />
+                  <span className="fw-700">Algorithmic Signal</span>
+                  <span
+                    className={`badge ${
+                      currentSignal.signal === 'BUY'
+                        ? 'badge-green'
+                        : currentSignal.signal === 'SELL'
+                        ? 'badge-red'
+                        : 'badge-amber'
+                    }`}
+                  >
+                    {currentSignal.strength}
+                  </span>
+                </div>
+                <span className="trade-signal-conf">
+                  <ShieldCheck size={12} />
+                  {currentSignal.confidence}% Conf.
+                </span>
+              </div>
+
+              <div className="trade-signal-grid">
+                <div className="trade-signal-col">
+                  <span className="signal-label">Entry Range</span>
+                  <span className="signal-value text-mono">
+                    ${formatPrice(currentSignal.entryRange?.min || currentSignal.entryPrice, selectedSymbol)} - ${formatPrice(currentSignal.entryRange?.max || currentSignal.entryPrice, selectedSymbol)}
+                  </span>
+                </div>
+                <div className="trade-signal-col">
+                  <span className="signal-label">Target TP1</span>
+                  <span className="signal-value text-mono text-green">
+                    ${formatPrice(currentSignal.tp1, selectedSymbol)}
+                    <small> (+{currentSignal.tp1Pct}%)</small>
+                  </span>
+                </div>
+                <div className="trade-signal-col">
+                  <span className="signal-label">Stop Loss</span>
+                  <span className="signal-value text-mono text-red">
+                    ${formatPrice(currentSignal.stopLoss, selectedSymbol)}
+                    <small> ({currentSignal.slPct}%)</small>
+                  </span>
+                </div>
+                <div className="trade-signal-col">
+                  <span className="signal-label">Risk : Reward</span>
+                  <span className="signal-value text-mono text-cyan">
+                    1:{currentSignal.riskReward}
+                  </span>
+                </div>
+              </div>
+
+              {currentSignal.reasons?.[0] && (
+                <div className="trade-signal-rationale">
+                  <span className="rationale-dot" />
+                  <span>
+                    <strong>{currentSignal.reasons[0].title}:</strong> {currentSignal.reasons[0].detail}
+                  </span>
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="btn-apply-signal-panel"
+                onClick={() => applySignalValues(currentSignal)}
+              >
+                <Zap size={13} />
+                <span>Apply Signal Levels (Side, TP & SL)</span>
+              </button>
             </div>
           )}
 

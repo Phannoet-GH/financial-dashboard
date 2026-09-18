@@ -4,6 +4,7 @@ import { useMarketSimulator } from '../hooks/useMarketSimulator';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { useNews } from '../hooks/useNews';
 import { calculateMarketFlow, generateWhaleOrder } from '../data/marketAnalytics';
+import { calculateTradingSignal, getAllTradingSignals } from '../data/marketSignals';
 
 const MarketContext = createContext(null);
 
@@ -52,6 +53,24 @@ export function MarketProvider({ children }) {
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
   const [selectedBreakingNews, setSelectedBreakingNews] = useState(null);
 
+  // Sync state to URL hash
+  const setActiveView = useCallback((view, symbol) => {
+    setActiveViewState(view);
+    const sym = symbol || (view === 'markets' ? selectedSymbol : null);
+    const hash = `#/${view}${sym ? `?symbol=${sym}` : ''}`;
+    if (window.location.hash !== hash) {
+      window.location.hash = hash;
+    }
+  }, [selectedSymbol]);
+
+  // Navigate helper to set view and symbol simultaneously
+  const navigateTo = useCallback((view, symbol) => {
+    if (symbol) setSelectedSymbol(symbol);
+    setActiveViewState(view);
+    const hash = `#/${view}${symbol ? `?symbol=${symbol}` : ''}`;
+    window.location.hash = hash;
+  }, []);
+
   // Institutional Whale Tape State
   const [whaleOrders, setWhaleOrders] = useState(() => [
     generateWhaleOrder(prices),
@@ -70,6 +89,29 @@ export function MarketProvider({ children }) {
 
   // Market Flow Aggregation
   const marketFlowData = useMemo(() => calculateMarketFlow(prices), [prices]);
+
+  // Trading Signals Engine: multi-factor Buy / Sell / Hold recommendations
+  const tradingSignals = useMemo(() => {
+    return getAllTradingSignals(prices, ohlcHistory, marketFlowData);
+  }, [prices, ohlcHistory, marketFlowData]);
+
+  const [tradeSignalPrefill, setTradeSignalPrefill] = useState(null);
+
+  const getSignalForSymbol = useCallback((sym) => {
+    const p = prices[sym];
+    if (!p) return null;
+    const bars = ohlcHistory[sym]?.['1m'] || [];
+    const assetFlow = marketFlowData?.assetFlows?.[sym];
+    return calculateTradingSignal(sym, p, bars, assetFlow);
+  }, [prices, ohlcHistory, marketFlowData]);
+
+  const applySignalToTrade = useCallback((signal) => {
+    if (!signal) return;
+    setSelectedSymbol(signal.symbol);
+    setTradeSignalPrefill(signal);
+    navigateTo('markets', signal.symbol);
+    addAlert(`🎯 Applied ${signal.signal} Signal for ${signal.symbol} (TP: $${signal.tp1} | SL: $${signal.stopLoss})`, 'info');
+  }, [navigateTo]);
 
   // Price Triggers Engine
   const [priceTriggers, setPriceTriggers] = useState([
@@ -122,24 +164,6 @@ export function MarketProvider({ children }) {
       }
     });
   }, [prices]);
-
-  // Sync state to URL hash
-  const setActiveView = useCallback((view, symbol) => {
-    setActiveViewState(view);
-    const sym = symbol || (view === 'markets' ? selectedSymbol : null);
-    const hash = `#/${view}${sym ? `?symbol=${sym}` : ''}`;
-    if (window.location.hash !== hash) {
-      window.location.hash = hash;
-    }
-  }, [selectedSymbol]);
-
-  // Navigate helper to set view and symbol simultaneously
-  const navigateTo = useCallback((view, symbol) => {
-    if (symbol) setSelectedSymbol(symbol);
-    setActiveViewState(view);
-    const hash = `#/${view}${symbol ? `?symbol=${symbol}` : ''}`;
-    window.location.hash = hash;
-  }, []);
 
   // Listen to browser forward/back buttons & hashchange
   useEffect(() => {
@@ -329,6 +353,8 @@ export function MarketProvider({ children }) {
       news, triggerCatalyst,
       marketFlowData, whaleOrders,
       selectedBreakingNews, setSelectedBreakingNews,
+      tradingSignals, getSignalForSymbol,
+      tradeSignalPrefill, setTradeSignalPrefill, applySignalToTrade,
       selectedSymbol, setSelectedSymbol,
       activeView, setActiveView,
       navigateTo,

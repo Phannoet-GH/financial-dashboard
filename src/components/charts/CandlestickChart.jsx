@@ -2,21 +2,23 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { createChart, CandlestickSeries, HistogramSeries, ColorType, CrosshairMode } from 'lightweight-charts';
 import { useMarket } from '../../context/MarketContext';
-import { ALL_INSTRUMENTS } from '../../data/instruments';
+import { ALL_INSTRUMENTS, formatPrice } from '../../data/instruments';
 import { calculateMovingDirection } from '../../data/marketAnalytics';
-import { Compass } from 'lucide-react';
+import { calculateTradingSignal } from '../../data/marketSignals';
+import { Compass, Zap, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import './CandlestickChart.css';
 
 const INTERVALS = ['1m', '5m', '15m', '1h'];
 
 export default function CandlestickChart() {
-  const { prices, ohlcHistory, selectedSymbol, setSelectedSymbol, marketFlowData, navigateTo } = useMarket();
+  const { prices, ohlcHistory, selectedSymbol, setSelectedSymbol, marketFlowData, navigateTo, applySignalToTrade } = useMarket();
   const containerRef = useRef(null);
   const chartRef     = useRef(null);
   const seriesRef    = useRef(null);
   const volSeriesRef = useRef(null);
   const [interval, setInterval_] = useState('1m');
   const [ohlc, setOhlc] = useState(null);
+  const [showReasons, setShowReasons] = useState(false);
 
   // Create chart once
   useEffect(() => {
@@ -154,6 +156,10 @@ export default function CandlestickChart() {
   }, [selectedSymbol, p, bars]);
   const assetFlow = marketFlowData?.assetFlows?.[selectedSymbol];
 
+  const currentSignal = useMemo(() => {
+    return calculateTradingSignal(selectedSymbol, p, bars, assetFlow);
+  }, [selectedSymbol, p, bars, assetFlow]);
+
   function handleIntervalChange(iv) {
     setInterval_(iv);
     // Reset key so useEffect triggers immediate data reload for the new timeframe
@@ -232,6 +238,87 @@ export default function CandlestickChart() {
           </div>
         </div>
       </div>
+
+      {/* Trading Signal Ribbon */}
+      {currentSignal && (
+        <div className={`chart-signal-banner signal-${currentSignal.signal.toLowerCase()}`}>
+          <div className="signal-banner-left">
+            <span className={`signal-badge badge-${currentSignal.signal.toLowerCase()}`}>
+              <Zap size={13} />
+              {currentSignal.strength}
+            </span>
+            <span className="signal-confidence" title="Algorithmic confluence confidence score">
+              <ShieldCheck size={13} />
+              {currentSignal.confidence}% Conf.
+            </span>
+            <div className="signal-metric-group">
+              <span className="metric-label">Entry:</span>
+              <span className="metric-val text-mono">
+                ${formatPrice(currentSignal.entryPrice, selectedSymbol)}
+              </span>
+            </div>
+            <div className="signal-metric-group">
+              <span className="metric-label">TP:</span>
+              <span className="metric-val text-mono text-green">
+                ${formatPrice(currentSignal.tp1, selectedSymbol)}
+                <span className="metric-sub"> (+{currentSignal.tp1Pct}%)</span>
+              </span>
+            </div>
+            <div className="signal-metric-group">
+              <span className="metric-label">SL:</span>
+              <span className="metric-val text-mono text-red">
+                ${formatPrice(currentSignal.stopLoss, selectedSymbol)}
+                <span className="metric-sub"> ({currentSignal.slPct}%)</span>
+              </span>
+            </div>
+            <div className="signal-metric-group r-r-group">
+              <span className="metric-label">R:R:</span>
+              <span className="metric-val text-mono text-cyan">
+                1:{currentSignal.riskReward}
+              </span>
+            </div>
+          </div>
+
+          <div className="signal-banner-right">
+            <button
+              type="button"
+              className="btn-reasons-toggle"
+              onClick={() => setShowReasons(prev => !prev)}
+              title="View technical rationale & confluence factors"
+            >
+              <span>Why?</span>
+              {showReasons ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            </button>
+            <button
+              type="button"
+              className="btn-apply-signal"
+              onClick={() => applySignalToTrade(currentSignal)}
+              title="Pre-fill trade order with these entry, TP and SL targets"
+            >
+              Apply to Order
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded Signal Confluence Rationale */}
+      {currentSignal && showReasons && (
+        <div className="signal-reasons-drawer animate-fade-in">
+          <div className="reasons-header">
+            <span>Algorithmic Confluence Analysis ({selectedSymbol})</span>
+            <span className="reasons-timeframe text-muted">{currentSignal.timeframe}</span>
+          </div>
+          <div className="reasons-grid">
+            {currentSignal.reasons?.map((r, i) => (
+              <div key={i} className={`reason-card bias-${r.bias}`}>
+                <div className="reason-title">{r.title}</div>
+                <div className="reason-detail">{r.detail}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Chart */}
       <div ref={containerRef} className="chart-container" />
     </div>

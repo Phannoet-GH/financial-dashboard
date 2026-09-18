@@ -65,6 +65,220 @@
   display: flex; gap: 14px; font-size: 11px; color: var(--text-muted);
 }
 .ohlc-row b { font-weight: 600; color: var(--text-secondary); }
+
+/* Trading Signal Ribbon */
+.chart-signal-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 16px;
+  background: rgba(13, 17, 23, 0.9);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.chart-signal-banner.signal-buy {
+  border-left: 3px solid var(--green);
+  background: linear-gradient(90deg, rgba(0, 255, 136, 0.06), rgba(13, 17, 23, 0.95));
+}
+
+.chart-signal-banner.signal-sell {
+  border-left: 3px solid var(--red);
+  background: linear-gradient(90deg, rgba(255, 71, 87, 0.06), rgba(13, 17, 23, 0.95));
+}
+
+.chart-signal-banner.signal-hold {
+  border-left: 3px solid var(--amber);
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.06), rgba(13, 17, 23, 0.95));
+}
+
+.signal-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.signal-banner-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.signal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-buy {
+  background: rgba(0, 255, 136, 0.15);
+  color: var(--green);
+  border: 1px solid rgba(0, 255, 136, 0.4);
+}
+
+.badge-sell {
+  background: rgba(255, 71, 87, 0.15);
+  color: var(--red);
+  border: 1px solid rgba(255, 71, 87, 0.4);
+}
+
+.badge-hold {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--amber);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.signal-confidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.15);
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+}
+
+.signal-metric-group {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 11px;
+}
+
+.metric-label {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-val {
+  font-weight: 700;
+}
+
+.metric-sub {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.btn-reasons-toggle {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-reasons-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.btn-apply-signal {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(99, 102, 241, 0.3));
+  border: 1px solid rgba(0, 212, 255, 0.5);
+  color: #fff;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.15);
+}
+
+.btn-apply-signal:hover {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.5), rgba(99, 102, 241, 0.5));
+  box-shadow: 0 0 14px rgba(0, 212, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+/* Signal Confluence Drawer */
+.signal-reasons-drawer {
+  background: rgba(10, 14, 22, 0.96);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 10px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.reasons-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: 0.5px;
+}
+
+.reasons-timeframe {
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+
+.reasons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.reason-card {
+  padding: 8px 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+}
+
+.reason-card.bias-bull {
+  border-left: 3px solid var(--green);
+}
+
+.reason-card.bias-bear {
+  border-left: 3px solid var(--red);
+}
+
+.reason-card.bias-neutral {
+  border-left: 3px solid var(--amber);
+}
+
+.reason-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.reason-detail {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 .chart-container {
   flex: 1; min-height: 0; width: 100%;
 }

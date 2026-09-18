@@ -12,6 +12,8 @@ import {
   BarChart3,
   Layers,
   Search,
+  ShieldCheck,
+  Target,
 } from 'lucide-react';
 import './MarketFlowView.css';
 
@@ -25,11 +27,14 @@ export default function MarketFlowView() {
     triggerCatalyst,
     setSelectedBreakingNews,
     news,
+    tradingSignals,
+    applySignalToTrade,
   } = useMarket();
 
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'stocks' | 'crypto' | 'forex' | 'commodities'
   const [searchQuery, setSearchQuery] = useState('');
   const [directionFilter, setDirectionFilter] = useState('ALL'); // 'ALL' | 'BULLISH' | 'BEARISH'
+  const [signalFilter, setSignalFilter] = useState('ALL'); // 'ALL' | 'BUY' | 'SELL' | 'HIGH'
   const [selectedCatalystPreset, setSelectedCatalystPreset] = useState(PRESET_BREAKING_NEWS[0]?.id || 'cat-1');
 
   // Filter instruments based on tab, direction, and search
@@ -84,6 +89,17 @@ export default function MarketFlowView() {
   const breakingNewsList = useMemo(() => {
     return news.filter(n => n.isBreaking || n.impactLevel === 'CRITICAL' || n.impactLevel === 'HIGH').slice(0, 6);
   }, [news]);
+
+  // Filtered Algorithmic Signals for Radar
+  const displayedSignals = useMemo(() => {
+    if (!tradingSignals) return [];
+    return tradingSignals.filter(sig => {
+      if (signalFilter === 'BUY') return sig.signal === 'BUY';
+      if (signalFilter === 'SELL') return sig.signal === 'SELL';
+      if (signalFilter === 'HIGH') return sig.confidence >= 75;
+      return true;
+    });
+  }, [tradingSignals, signalFilter]);
 
   const {
     netMarketFlowM = 0,
@@ -236,6 +252,150 @@ export default function MarketFlowView() {
                       <span className={`text-xs text-mono ${sec.avgChange >= 0 ? 'text-green' : 'text-red'}`}>
                         {sec.avgChange >= 0 ? '+' : ''}{sec.avgChange}% avg
                       </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Live Algorithmic Trading Signals Radar */}
+          <div className="glass-card flow-card signals-radar-card">
+            <div className="card-header-clean" style={{ flexWrap: 'wrap', gap: 12 }}>
+              <div className="card-header-title">
+                <Target size={16} className="text-cyan" />
+                <span>Live Algorithmic Trading Signals Radar</span>
+                <span className="badge badge-cyan" style={{ fontSize: 10 }}>
+                  MULTI-CONFLUENCE
+                </span>
+              </div>
+
+              {/* Signals Filter Tabs */}
+              <div className="pill-group">
+                {[
+                  { id: 'ALL', label: 'All Signals' },
+                  { id: 'BUY', label: 'Buy / Long' },
+                  { id: 'SELL', label: 'Sell / Short' },
+                  { id: 'HIGH', label: 'High Conviction (75%+)' },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`pill-btn ${signalFilter === tab.id ? 'active' : ''}`}
+                    onClick={() => setSignalFilter(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="signals-radar-grid">
+              {displayedSignals.map(sig => {
+                const isBuy = sig.signal === 'BUY';
+                const isSell = sig.signal === 'SELL';
+                const p = prices[sig.symbol];
+                const inst = ALL_INSTRUMENTS.find(i => i.id === sig.symbol);
+
+                return (
+                  <div
+                    key={sig.symbol}
+                    className={`signal-radar-item signal-border-${sig.signal.toLowerCase()}`}
+                  >
+                    <div className="radar-item-top">
+                      <div className="radar-sym-info">
+                        <span
+                          className="asset-sym-badge"
+                          style={{
+                            color: inst?.color || 'var(--cyan)',
+                            borderColor: (inst?.color || 'var(--cyan)') + '44',
+                          }}
+                        >
+                          {sig.symbol}
+                        </span>
+                        <div>
+                          <div className="fw-700 text-sm">{inst?.name || sig.symbol}</div>
+                          <div className="text-xs text-mono text-muted">
+                            ${formatPrice(p?.price || sig.entryPrice, sig.symbol)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="radar-signal-badge-wrap">
+                        <span
+                          className={`badge ${
+                            isBuy ? 'badge-green' : isSell ? 'badge-red' : 'badge-amber'
+                          }`}
+                        >
+                          <Zap size={11} />
+                          {sig.strength}
+                        </span>
+                        <span className="radar-conf-badge">
+                          <ShieldCheck size={11} />
+                          {sig.confidence}% Conf.
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Levels Matrix */}
+                    <div className="radar-levels-box">
+                      <div className="radar-level-col">
+                        <span className="level-lbl">ENTRY</span>
+                        <span className="level-val text-mono">
+                          ${formatPrice(sig.entryPrice, sig.symbol)}
+                        </span>
+                      </div>
+                      <div className="radar-level-col">
+                        <span className="level-lbl">TARGET (TP)</span>
+                        <span className="level-val text-mono text-green">
+                          ${formatPrice(sig.tp1, sig.symbol)}
+                          <small> (+{sig.tp1Pct}%)</small>
+                        </span>
+                      </div>
+                      <div className="radar-level-col">
+                        <span className="level-lbl">STOP LOSS (SL)</span>
+                        <span className="level-val text-mono text-red">
+                          ${formatPrice(sig.stopLoss, sig.symbol)}
+                          <small> ({sig.slPct}%)</small>
+                        </span>
+                      </div>
+                      <div className="radar-level-col">
+                        <span className="level-lbl">RISK/REWARD</span>
+                        <span className="level-val text-mono text-cyan">
+                          1:{sig.riskReward}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Confluence Reason Bullet */}
+                    {sig.reasons?.[0] && (
+                      <div className="radar-reason-text text-xs text-muted">
+                        <span className="radar-reason-dot" />
+                        <span>
+                          <strong>{sig.reasons[0].title}:</strong> {sig.reasons[0].detail}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="radar-item-actions">
+                      <button
+                        type="button"
+                        className="btn-radar-chart"
+                        onClick={() => navigateTo('markets', sig.symbol)}
+                        title={`Inspect ${sig.symbol} Chart`}
+                      >
+                        Chart <ArrowUpRight size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-radar-trade"
+                        onClick={() => applySignalToTrade(sig)}
+                        title={`Execute ${sig.signal} on ${sig.symbol}`}
+                      >
+                        <Zap size={12} />
+                        <span>Trade Signal</span>
+                      </button>
                     </div>
                   </div>
                 );
