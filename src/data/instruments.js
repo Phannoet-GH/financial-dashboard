@@ -82,3 +82,12 @@ export function formatVolume(vol) {
   if (vol >= 1e3) return (vol / 1e3).toFixed(1) + 'K';
   return vol.toString();
 }
+
+export function getUnitLabel(sym) {
+  if (!sym) return '';
+  if (sym === 'XAU/USD' || sym === 'XAG/USD') return 'oz';
+  if (sym.includes('/')) return 'Units';
+  const inst = ALL_INSTRUMENTS.find(i => i.id === sym);
+  if (inst?.sector === 'Crypto') return 'Coins';
+  return 'Shares';
+}

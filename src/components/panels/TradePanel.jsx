@@ -1,7 +1,7 @@
 // src/components/panels/TradePanel.jsx
 import { useState } from 'react';
 import { useMarket } from '../../context/MarketContext';
-import { ALL_INSTRUMENTS, formatPrice } from '../../data/instruments';
+import { ALL_INSTRUMENTS, formatPrice, getUnitLabel } from '../../data/instruments';
 import './TradePanel.css';
 
 export default function TradePanel() {
@@ -131,7 +131,6 @@ export default function TradePanel() {
     setTimeout(() => setStatus(null), 3500);
   }
 
-  const activeSymbolOrders = tpSlOrders?.filter(o => o.symbol === selectedSymbol && o.active) || [];
   const allActiveLimits = pendingLimitOrders?.filter(o => o.active) || [];
   const totalPendingCount = allActiveLimits.length + (tpSlOrders?.filter(o => o.active)?.length || 0);
 
@@ -335,7 +334,9 @@ export default function TradePanel() {
           {/* Quantity & Quick Size Presets */}
           <div className="form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label className="form-label">Quantity</label>
+              <label className="form-label">
+                Quantity <span className="text-cyan text-xs" style={{ fontWeight: 600 }}>({getUnitLabel(selectedSymbol)})</span>
+              </label>
               <span className="text-xs text-muted">
                 Avail: ${(portfolioStats?.cash || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
               </span>
@@ -345,7 +346,7 @@ export default function TradePanel() {
               type="number"
               min="0.0001"
               step="any"
-              placeholder="0.00"
+              placeholder={selectedSymbol === 'XAU/USD' || selectedSymbol === 'XAG/USD' ? '1.0 oz' : '0.00'}
               value={qty}
               onChange={e => setQty(e.target.value)}
               required
