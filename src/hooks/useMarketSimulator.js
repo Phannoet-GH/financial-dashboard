@@ -213,5 +213,70 @@ export function useMarketSimulator(options = {}) {
     }, 0);
   }, []);
 
-  return { prices, ohlcHistory, getMarketValue };
+  // Real-time market shock engine triggered by breaking news events
+  const applyMarketShock = useCallback(({ symbols = [], direction = 'bullish', magnitudePct = 3.5 }) => {
+    if (!symbols.length) return;
+
+    setPrices(prev => {
+      const next = { ...prev };
+      symbols.forEach(sym => {
+        const cur = prev[sym];
+        if (!cur) return;
+
+        const mult = direction === 'bullish' ? 1 + magnitudePct / 100 : 1 - magnitudePct / 100;
+        const newPrice = Math.max(cur.price * mult, 0.0001);
+        const change = newPrice - cur.open;
+        const changePct = (change / cur.open) * 100;
+        const volumeSurge = Math.floor(Math.random() * 500_000) + 200_000;
+
+        next[sym] = {
+          ...cur,
+          prevPrice: cur.price,
+          price: parseFloat(newPrice.toFixed(sym.includes('/') ? 4 : 2)),
+          high: Math.max(cur.high, newPrice),
+          low: Math.min(cur.low, newPrice),
+          close: parseFloat(newPrice.toFixed(4)),
+          change: parseFloat(change.toFixed(2)),
+          changePct: parseFloat(changePct.toFixed(2)),
+          volume: cur.volume + volumeSurge,
+          direction: direction === 'bullish' ? 'up' : 'down',
+        };
+      });
+      return next;
+    });
+
+    // Also update OHLC history so charts react instantly
+    setOhlcHistory(prev => {
+      const next = { ...prev };
+      symbols.forEach(sym => {
+        const instTfs = prev[sym];
+        if (!instTfs) return;
+        const curP = pricesRef.current[sym];
+        if (!curP) return;
+
+        const mult = direction === 'bullish' ? 1 + magnitudePct / 100 : 1 - magnitudePct / 100;
+        const shockPrice = Math.max(curP.price * mult, 0.0001);
+
+        next[sym] = { ...instTfs };
+        ['1m', '5m', '15m', '1h'].forEach(tf => {
+          const bars = instTfs[tf];
+          if (!bars || bars.length === 0) return;
+          const lastBar = bars[bars.length - 1];
+          next[sym][tf] = [
+            ...bars.slice(0, -1),
+            {
+              ...lastBar,
+              high: Math.max(lastBar.high, shockPrice),
+              low: Math.min(lastBar.low, shockPrice),
+              close: shockPrice,
+              volume: lastBar.volume + 150_000,
+            },
+          ];
+        });
+      });
+      return next;
+    });
+  }, []);
+
+  return { prices, ohlcHistory, getMarketValue, applyMarketShock };
 }

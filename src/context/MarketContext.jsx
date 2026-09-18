@@ -1,12 +1,13 @@
 // src/context/MarketContext.jsx
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useMarketSimulator } from '../hooks/useMarketSimulator';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { useNews } from '../hooks/useNews';
+import { calculateMarketFlow, generateWhaleOrder } from '../data/marketAnalytics';
 
 const MarketContext = createContext(null);
 
-const VALID_ROUTES = ['overview', 'markets', 'portfolio', 'alerts', 'settings'];
+const VALID_ROUTES = ['overview', 'markets', 'flow', 'portfolio', 'alerts', 'settings'];
 
 function getInitialRoute() {
   const hash = window.location.hash.replace(/^#\/?/, '').split('?')[0];
@@ -35,7 +36,7 @@ export function MarketProvider({ children }) {
   const [currency, setCurrency]         = useState('USD');
   const [compactMode, setCompactMode]   = useState(false);
 
-  const { prices, ohlcHistory, getMarketValue } = useMarketSimulator({
+  const { prices, ohlcHistory, getMarketValue, applyMarketShock } = useMarketSimulator({
     tickMs: tickSpeed,
     volatilityMultiplier: volatility,
     driftBias: marketBias,
@@ -43,12 +44,32 @@ export function MarketProvider({ children }) {
   });
 
   const { portfolioStats, buy, sell, tradeHistory, resetPortfolio } = usePortfolio(prices);
-  const news = useNews(prices);
+  const { news, triggerCatalyst: baseTriggerCatalyst } = useNews(prices, applyMarketShock);
 
   const [selectedSymbol, setSelectedSymbol] = useState(getInitialSymbol);
-  const [activeView, setActiveViewState]   = useState(getInitialRoute); // 'overview' | 'markets' | 'portfolio' | 'alerts' | 'settings'
+  const [activeView, setActiveViewState]   = useState(getInitialRoute); // 'overview' | 'markets' | 'flow' | 'portfolio' | 'alerts' | 'settings'
   const [alerts, setAlerts]                 = useState([]);
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
+  const [selectedBreakingNews, setSelectedBreakingNews] = useState(null);
+
+  // Institutional Whale Tape State
+  const [whaleOrders, setWhaleOrders] = useState(() => [
+    generateWhaleOrder(prices),
+    generateWhaleOrder(prices),
+    generateWhaleOrder(prices),
+  ]);
+
+  // Periodic Institutional Whale Order Generation
+  useEffect(() => {
+    if (Object.keys(prices).length === 0) return;
+    const interval = setInterval(() => {
+      setWhaleOrders(prev => [generateWhaleOrder(prices), ...prev].slice(0, 20));
+    }, 4500 + Math.random() * 3000);
+    return () => clearInterval(interval);
+  }, [prices]);
+
+  // Market Flow Aggregation
+  const marketFlowData = useMemo(() => calculateMarketFlow(prices), [prices]);
 
   // Price Triggers Engine
   const [priceTriggers, setPriceTriggers] = useState([
@@ -293,11 +314,21 @@ export function MarketProvider({ children }) {
     return result;
   }
 
+  const triggerCatalyst = useCallback((presetId) => {
+    const item = baseTriggerCatalyst(presetId);
+    if (item) {
+      addAlert(`🚨 BREAKING NEWS CATALYST: ${item.text}`, item.impactLevel === 'CRITICAL' ? 'warning' : 'info');
+    }
+    return item;
+  }, [baseTriggerCatalyst]);
+
   return (
     <MarketContext.Provider value={{
-      prices, ohlcHistory, getMarketValue,
+      prices, ohlcHistory, getMarketValue, applyMarketShock,
       portfolioStats, tradeHistory, resetPortfolio,
-      news,
+      news, triggerCatalyst,
+      marketFlowData, whaleOrders,
+      selectedBreakingNews, setSelectedBreakingNews,
       selectedSymbol, setSelectedSymbol,
       activeView, setActiveView,
       navigateTo,

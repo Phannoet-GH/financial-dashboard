@@ -1,14 +1,16 @@
 // src/components/charts/CandlestickChart.jsx
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { createChart, CandlestickSeries, HistogramSeries, ColorType, CrosshairMode } from 'lightweight-charts';
 import { useMarket } from '../../context/MarketContext';
 import { ALL_INSTRUMENTS } from '../../data/instruments';
+import { calculateMovingDirection } from '../../data/marketAnalytics';
+import { Compass } from 'lucide-react';
 import './CandlestickChart.css';
 
 const INTERVALS = ['1m', '5m', '15m', '1h'];
 
 export default function CandlestickChart() {
-  const { prices, ohlcHistory, selectedSymbol, setSelectedSymbol } = useMarket();
+  const { prices, ohlcHistory, selectedSymbol, setSelectedSymbol, marketFlowData, navigateTo } = useMarket();
   const containerRef = useRef(null);
   const chartRef     = useRef(null);
   const seriesRef    = useRef(null);
@@ -150,8 +152,12 @@ export default function CandlestickChart() {
     setOhlc({ open: last.open, high: last.high, low: last.low, close: last.close });
   }, [prices, selectedSymbol, interval, ohlcHistory]);
 
-  const inst = ALL_INSTRUMENTS.find(i => i.id === selectedSymbol);
-  const p    = prices[selectedSymbol];
+  const p = prices[selectedSymbol];
+  const bars = ohlcHistory[selectedSymbol]?.[interval] || [];
+  const directionData = useMemo(() => {
+    return calculateMovingDirection(selectedSymbol, p, bars);
+  }, [selectedSymbol, p, bars]);
+  const assetFlow = marketFlowData?.assetFlows?.[selectedSymbol];
 
   function handleIntervalChange(iv) {
     setInterval_(iv);
@@ -185,6 +191,26 @@ export default function CandlestickChart() {
               >
                 {p.changePct >= 0 ? '+' : ''}{p.changePct.toFixed(2)}%
               </span>
+            </div>
+          )}
+          {directionData && (
+            <div
+              className="chart-direction-pill"
+              style={{
+                borderColor: directionData.color + '66',
+                color: directionData.color,
+                background: directionData.color + '15',
+              }}
+              onClick={() => navigateTo('flow')}
+              title={`View ${selectedSymbol} in Market Flow Radar (Score: ${directionData.score}/100 | RSI: ${directionData.rsi})`}
+            >
+              <Compass size={12} />
+              <span>{directionData.label}</span>
+              {assetFlow && (
+                <span className="chart-flow-tag text-mono">
+                  {assetFlow.buyPct}% Inflow
+                </span>
+              )}
             </div>
           )}
         </div>

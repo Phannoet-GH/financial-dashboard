@@ -15,14 +15,14 @@ export default function WatchlistPanel() {
 
   const filtered = filter === 'all'
     ? ALL_INSTRUMENTS
-    : ALL_INSTRUMENTS.filter(i => i.sector.toLowerCase() === filter);
+    : ALL_INSTRUMENTS.filter(i => i.sector.toLowerCase() === filter.toLowerCase());
 
   return (
     <div className="watchlist-card glass-card">
       <div className="panel-header">
         <span className="panel-title">Watchlist</span>
         <div className="tab-bar">
-          {['all', 'Technology', 'Crypto', 'Forex'].map(f => (
+          {['all', 'Technology', 'Crypto', 'Forex', 'Commodities'].map(f => (
             <button key={f} className={`tab-item${filter === f ? ' active' : ''}`} onClick={() => setFilter(f)}>
               {f === 'all' ? 'All' : f}
             </button>

@@ -1,12 +1,13 @@
 // src/components/layout/Sidebar.jsx
-import { LayoutDashboard, TrendingUp, Briefcase, Bell, Settings, Activity, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Briefcase, Bell, Settings, Activity, ChevronRight, Compass } from 'lucide-react';
 import { useMarket } from '../../context/MarketContext';
 import './Sidebar.css';
 
 const NAV = [
-  { id: 'overview',  label: 'Overview',  Icon: LayoutDashboard },
-  { id: 'markets',   label: 'Markets',   Icon: TrendingUp      },
-  { id: 'portfolio', label: 'Portfolio', Icon: Briefcase       },
+  { id: 'overview',  label: 'Overview',     Icon: LayoutDashboard },
+  { id: 'markets',   label: 'Markets',      Icon: TrendingUp      },
+  { id: 'flow',      label: 'Market Flow',  Icon: Compass, badge: 'NEW' },
+  { id: 'portfolio', label: 'Portfolio',    Icon: Briefcase       },
 ];
 
 export default function Sidebar() {
@@ -35,7 +36,7 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="sidebar-nav">
         <div className="nav-section-label">Dashboard</div>
-        {NAV.map(({ id, label, Icon }) => (
+        {NAV.map(({ id, label, Icon, badge }) => (
           <a
             key={id}
             href={`#/${id}`}
@@ -47,6 +48,23 @@ export default function Sidebar() {
           >
             <Icon className="nav-icon" size={16} />
             {label}
+            {badge && (
+              <span
+                style={{
+                  marginLeft: 'auto',
+                  fontSize: 9,
+                  fontWeight: 800,
+                  padding: '2px 5px',
+                  borderRadius: 4,
+                  background: 'rgba(0, 212, 255, 0.18)',
+                  color: 'var(--cyan)',
+                  border: '1px solid rgba(0, 212, 255, 0.3)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {badge}
+              </span>
+            )}
             {id === 'portfolio' && <ChevronRight size={12} style={{ marginLeft: 'auto', opacity: 0.4 }} />}
           </a>
         ))}

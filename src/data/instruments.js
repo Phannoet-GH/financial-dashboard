@@ -27,6 +27,10 @@ export const INSTRUMENTS = {
     { id: 'USD/JPY', name: 'US Dollar / Japanese Yen', price: 149.25, vol: 0.003, sector: 'Forex', color: '#00ff88' },
     { id: 'USD/CHF', name: 'US Dollar / Swiss Franc',  price: 0.8920, vol: 0.004, sector: 'Forex', color: '#ffb347' },
   ],
+  commodities: [
+    { id: 'XAU/USD', name: 'Gold (Spot / USD)', price: 2384.50, vol: 0.012, sector: 'Commodities', color: '#fbbf24' },
+    { id: 'XAG/USD', name: 'Silver (Spot / USD)', price: 28.60, vol: 0.022, sector: 'Commodities', color: '#cbd5e1' },
+  ],
 };
 
 // Flat array for easy iteration
@@ -34,6 +38,7 @@ export const ALL_INSTRUMENTS = [
   ...INSTRUMENTS.stocks,
   ...INSTRUMENTS.crypto,
   ...INSTRUMENTS.forex,
+  ...INSTRUMENTS.commodities,
 ];
 
 // Sector heatmap grid data
@@ -46,7 +51,7 @@ export const SECTORS = [
   { id: 'Automotive',  stocks: ['TSLA'],                              color: '#ff4757' },
   { id: 'Crypto',      stocks: ['BTC','ETH','SOL','BNB','AVAX'],     color: '#00ff88' },
   { id: 'Forex',       stocks: ['EUR/USD','GBP/USD'],                 color: '#38bdf8' },
-  { id: 'Commodities', stocks: [],                                    color: '#fbbf24' },
+  { id: 'Commodities', stocks: ['XAU/USD','XAG/USD'],                 color: '#fbbf24' },
   { id: 'Real Estate', stocks: [],                                    color: '#34d399' },
 ];
 
@@ -66,8 +71,8 @@ export const NEWS_TEMPLATES = [
 
 export function formatPrice(price, sym) {
   if (!sym) return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  if (sym.includes('/')) return price.toFixed(4);
-  if (price > 1000) return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (sym === 'XAU/USD' || price > 1000) return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (sym.includes('/') && price < 50) return price.toFixed(4);
   return price.toFixed(2);
 }
 

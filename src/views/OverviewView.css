@@ -17,6 +17,86 @@
 @media (max-width: 1200px) {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Flow Ribbon */
+.overview-flow-ribbon {
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(15, 22, 41, 0.7), rgba(10, 14, 26, 0.7));
+  border: 1px solid rgba(0, 212, 255, 0.18);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.overview-flow-ribbon:hover {
+  background: linear-gradient(135deg, rgba(15, 22, 41, 0.9), rgba(0, 212, 255, 0.08));
+  border-color: rgba(0, 212, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.flow-ribbon-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.flow-ribbon-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 99px;
+  border: 1px solid currentColor;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.flow-ribbon-label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.flow-ribbon-metrics {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.flow-ribbon-metric {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.flow-ribbon-action {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--cyan);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .overview-flow-ribbon {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .flow-ribbon-action {
+    margin-left: 0;
+  }
+}
+
 .overview-main {
   display: grid;
   grid-template-columns: 1fr 340px;

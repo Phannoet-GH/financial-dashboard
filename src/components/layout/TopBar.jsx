@@ -1,5 +1,5 @@
 // src/components/layout/TopBar.jsx
-import { Bell, Clock } from 'lucide-react';
+import { Bell, Clock, Flame } from 'lucide-react';
 import { useMarket } from '../../context/MarketContext';
 import { ALL_INSTRUMENTS, formatPrice } from '../../data/instruments';
 import { useState, useEffect } from 'react';
@@ -47,7 +47,9 @@ function Clock24() {
 }
 
 export default function TopBar() {
-  const { prices, alerts, navigateTo, showAlertsDropdown, setShowAlertsDropdown } = useMarket();
+  const { prices, alerts, navigateTo, showAlertsDropdown, setShowAlertsDropdown, news, setSelectedBreakingNews } = useMarket();
+
+  const latestBreaking = news?.find(n => n.isBreaking && (n.impactLevel === 'CRITICAL' || n.impactLevel === 'HIGH'));
 
   return (
     <header className="topbar">
@@ -56,6 +58,18 @@ export default function TopBar() {
         onSelect={(sym) => navigateTo('markets', sym)}
       />
       <div className="topbar-right">
+        {latestBreaking && (
+          <div
+            className="topbar-breaking-pill animate-fade-in"
+            onClick={() => setSelectedBreakingNews(latestBreaking)}
+            title="High-Impact Market Catalyst — Click to Inspect"
+          >
+            <Flame size={12} className="text-red" />
+            <span className="breaking-pill-text">
+              {latestBreaking.sym}: {latestBreaking.text.substring(0, 36)}...
+            </span>
+          </div>
+        )}
         <Clock24 />
         <div style={{ position: 'relative' }}>
           <button
