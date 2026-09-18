@@ -104,7 +104,7 @@ export default function CandlestickChart() {
 
   const lastKeyRef = useRef({ symbol: null, interval: null });
 
-  // Load / reload candle data when symbol OR timeframe interval changes
+  // Synchronize candlestick data with selectedSymbol, interval, and live updates
   useEffect(() => {
     const instData = ohlcHistory[selectedSymbol];
     if (!instData || !seriesRef.current) return;
@@ -115,6 +115,7 @@ export default function CandlestickChart() {
     const currentKey = `${selectedSymbol}-${interval}`;
     const prevKey    = `${lastKeyRef.current.symbol}-${lastKeyRef.current.interval}`;
 
+    // If symbol or interval changed: do a full reload with setData and fit content
     if (currentKey !== prevKey) {
       lastKeyRef.current = { symbol: selectedSymbol, interval };
       seriesRef.current.setData(hist);
@@ -129,19 +130,13 @@ export default function CandlestickChart() {
       if (last) {
         setOhlc({ open: last.open, high: last.high, low: last.low, close: last.close });
       }
+      return;
     }
-  }, [selectedSymbol, interval, ohlcHistory]);
 
-  // Live update: mutate last candle of the selected timeframe
-  useEffect(() => {
-    const p = prices[selectedSymbol];
-    if (!p || !seriesRef.current) return;
+    // Otherwise, this is a live tick for the CURRENT active symbol & interval: update last bar
+    const last = hist[hist.length - 1];
+    if (!last) return;
 
-    const instData = ohlcHistory[selectedSymbol];
-    const bars = instData?.[interval] || instData?.['1m'] || (Array.isArray(instData) ? instData : null);
-    if (!bars || bars.length === 0) return;
-
-    const last = bars[bars.length - 1];
     seriesRef.current.update(last);
     volSeriesRef.current?.update({
       time:  last.time,
@@ -150,7 +145,7 @@ export default function CandlestickChart() {
     });
 
     setOhlc({ open: last.open, high: last.high, low: last.low, close: last.close });
-  }, [prices, selectedSymbol, interval, ohlcHistory]);
+  }, [selectedSymbol, interval, ohlcHistory, prices]);
 
   const p = prices[selectedSymbol];
   const bars = ohlcHistory[selectedSymbol]?.[interval] || [];

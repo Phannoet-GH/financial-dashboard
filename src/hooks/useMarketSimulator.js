@@ -59,48 +59,52 @@ export const TIMEFRAMES = {
 };
 
 function buildOHLCHistory(basePrice, vol, bars = 100, intervalSeconds = 60) {
-  const candles = [];
   const nowSec = Math.floor(Date.now() / 1000);
   const alignedNow = Math.floor(nowSec / intervalSeconds) * intervalSeconds;
-  const tfVol = vol * Math.sqrt(intervalSeconds / 60);
-  let price = basePrice * (0.90 + Math.random() * 0.20);
+  // Timeframe volatility scaled appropriately
+  const barVol = Math.max(vol * Math.sqrt(intervalSeconds / 3600) * 0.35, 0.0012);
+  const isForex = basePrice < 50 && String(basePrice).includes('.');
+  const decimals = isForex ? 4 : 2;
 
-  for (let i = bars; i >= 0; i--) {
+  let curClose = basePrice;
+  const tempBars = [];
+
+  for (let i = 0; i < bars; i++) {
     const t = alignedNow - i * intervalSeconds;
-    const open = price;
-    let hi = open;
-    let lo = open;
+    const z = boxMuller();
+    const returnPct = z * barVol;
+    // Stepping backwards in time:
+    const open = curClose / Math.exp(returnPct);
+    const wickHigh = Math.abs(boxMuller()) * barVol * 0.5;
+    const wickLow  = Math.abs(boxMuller()) * barVol * 0.5;
 
-    // Simulate realistic intra-bar price movement
-    const steps = 8;
-    let cur = open;
-    for (let j = 0; j < steps; j++) {
-      cur = gbmTick(cur, tfVol / Math.sqrt(steps));
-      if (cur > hi) hi = cur;
-      if (cur < lo) lo = cur;
-    }
-    const close = cur;
-    price = close;
+    const high = Math.max(open, curClose) * (1 + wickHigh);
+    const low  = Math.min(open, curClose) * (1 - wickLow);
 
-    candles.push({
-      time: t,
-      open: parseFloat(open.toFixed(4)),
-      high: parseFloat(hi.toFixed(4)),
-      low: parseFloat(lo.toFixed(4)),
-      close: parseFloat(close.toFixed(4)),
-      volume: Math.floor(Math.random() * 1_000_000 * Math.sqrt(intervalSeconds / 60)) + 50_000,
+    tempBars.push({
+      time:   t,
+      open:   parseFloat(open.toFixed(decimals)),
+      high:   parseFloat(high.toFixed(decimals)),
+      low:    parseFloat(low.toFixed(decimals)),
+      close:  parseFloat(curClose.toFixed(decimals)),
+      volume: Math.floor(Math.random() * 800_000 * Math.sqrt(intervalSeconds / 60)) + 35_000,
     });
+
+    curClose = open;
   }
 
-  // Ensure current candle's close matches the current price
-  if (candles.length > 0) {
-    const last = candles[candles.length - 1];
+  // Reverse so candles are chronological (oldest to newest)
+  tempBars.reverse();
+
+  // Ensure last candle closes exactly at basePrice
+  if (tempBars.length > 0) {
+    const last = tempBars[tempBars.length - 1];
     last.close = basePrice;
-    last.high = Math.max(last.high, basePrice);
-    last.low = Math.min(last.low, basePrice);
+    last.high = Math.max(last.high, last.open, basePrice);
+    last.low = Math.min(last.low, last.open, basePrice);
   }
 
-  return candles;
+  return tempBars;
 }
 
 export function useMarketSimulator(options = {}) {
@@ -214,8 +218,11 @@ export function useMarketSimulator(options = {}) {
   }, []);
 
   // Real-time market shock engine triggered by breaking news events
-  const applyMarketShock = useCallback(({ symbols = [], direction = 'bullish', magnitudePct = 3.5 }) => {
+  const applyMarketShock = useCallback(({ symbols = [], direction = 'bullish', magnitudePct = 2.0 }) => {
     if (!symbols.length) return;
+
+    // Cap single-candle impulse to a realistic surge (max 1.8%)
+    const safeMagnitude = Math.min(Math.max(magnitudePct, 0.4), 1.8);
 
     setPrices(prev => {
       const next = { ...prev };
@@ -223,7 +230,7 @@ export function useMarketSimulator(options = {}) {
         const cur = prev[sym];
         if (!cur) return;
 
-        const mult = direction === 'bullish' ? 1 + magnitudePct / 100 : 1 - magnitudePct / 100;
+        const mult = direction === 'bullish' ? 1 + safeMagnitude / 100 : 1 - safeMagnitude / 100;
         const newPrice = Math.max(cur.price * mult, 0.0001);
         const change = newPrice - cur.open;
         const changePct = (change / cur.open) * 100;
@@ -254,7 +261,7 @@ export function useMarketSimulator(options = {}) {
         const curP = pricesRef.current[sym];
         if (!curP) return;
 
-        const mult = direction === 'bullish' ? 1 + magnitudePct / 100 : 1 - magnitudePct / 100;
+        const mult = direction === 'bullish' ? 1 + safeMagnitude / 100 : 1 - safeMagnitude / 100;
         const shockPrice = Math.max(curP.price * mult, 0.0001);
 
         next[sym] = { ...instTfs };
