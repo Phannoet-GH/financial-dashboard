@@ -379,8 +379,8 @@ export const PRESET_BREAKING_NEWS = [
   },
   {
     id: 'cat-gold-1',
-    headline: 'Spot Gold Breaks Historic All-Time High Past $2,400 on Massive Central Bank Buying',
-    summary: 'Spot Gold (XAU/USD) shattered all-time records surging past $2,400/oz as global central banks, sovereign wealth funds, and institutional desks ramp up reserve diversification.',
+    headline: 'Spot Gold Breaks Historic All-Time High Past $4,400 on Massive Central Bank Buying',
+    summary: 'Spot Gold (XAU/USD) shattered all-time records surging past $4,400/oz as global central banks, sovereign wealth funds, and institutional desks ramp up reserve diversification.',
     category: 'Commodities & Metals',
     impactLevel: 'CRITICAL',
     source: 'World Gold Council / Bloomberg',

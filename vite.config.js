@@ -81,6 +81,43 @@ async function fetchLiveMarketData() {
     marketCache.streams.crypto.status = 'degraded';
   }
 
+  // 1b. Fallback Commodities from Yahoo Finance (GC=F Gold, SI=F Silver)
+  if (!updatedData['XAU/USD'] || !updatedData['XAG/USD']) {
+    try {
+      const commMap = { 'GC=F': 'XAU/USD', 'SI=F': 'XAG/USD' };
+      await Promise.all(
+        Object.entries(commMap).map(async ([ticker, sym]) => {
+          if (updatedData[sym]) return;
+          try {
+            const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+            });
+            if (res.ok) {
+              const data = await res.json();
+              const meta = data?.chart?.result?.[0]?.meta;
+              if (meta && meta.regularMarketPrice) {
+                const prev = meta.chartPreviousClose || meta.previousClose || meta.regularMarketPrice;
+                const changePct = prev > 0 ? ((meta.regularMarketPrice - prev) / prev) * 100 : 0;
+                updatedData[sym] = {
+                  price: meta.regularMarketPrice,
+                  changePct: parseFloat(changePct.toFixed(2)),
+                  high: meta.regularMarketDayHigh || meta.regularMarketPrice,
+                  low: meta.regularMarketDayLow || meta.regularMarketPrice,
+                  volume: meta.regularMarketVolume || 150000,
+                  source: sym === 'XAU/USD' ? 'COMEX Gold (GC=F) Real-Time' : 'COMEX Silver (SI=F) Real-Time',
+                  updatedAt: new Date().toISOString(),
+                };
+              }
+            }
+          } catch (_) {}
+        })
+      );
+      if (updatedData['XAU/USD']) {
+        marketCache.streams.commodities = { status: 'connected', count: 2, lastSync: new Date().toLocaleTimeString() };
+      }
+    } catch (_) {}
+  }
+
   // 2. Fetch Forex from European Central Bank (Frankfurter)
   try {
     const fxRes = await fetch('https://api.frankfurter.app/latest?from=USD');
