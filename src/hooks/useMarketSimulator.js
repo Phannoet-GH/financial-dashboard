@@ -285,5 +285,90 @@ export function useMarketSimulator(options = {}) {
     });
   }, []);
 
-  return { prices, ohlcHistory, getMarketValue, applyMarketShock };
+  // Update prices and seamlessly align OHLC candles with live market feed
+  const updateWithLivePrices = useCallback((liveMap) => {
+    if (!liveMap || Object.keys(liveMap).length === 0) return;
+
+    setPrices(prev => {
+      const next = { ...prev };
+      let changed = false;
+
+      for (const [id, liveItem] of Object.entries(liveMap)) {
+        const cur = prev[id];
+        if (!cur || !liveItem || !liveItem.price) continue;
+
+        const newP = liveItem.price;
+        const change = (liveItem.changePct / 100) * newP;
+        const dir = newP > cur.price ? 'up' : newP < cur.price ? 'down' : cur.direction;
+
+        next[id] = {
+          ...cur,
+          prevPrice: cur.price,
+          price: newP,
+          changePct: liveItem.changePct !== undefined ? liveItem.changePct : cur.changePct,
+          change: parseFloat(change.toFixed(id.includes('/') ? 4 : 2)),
+          high: liveItem.high ? Math.max(liveItem.high, newP) : Math.max(cur.high, newP),
+          low: liveItem.low ? Math.min(liveItem.low, newP) : Math.min(cur.low, newP),
+          volume: liveItem.volume || cur.volume,
+          direction: dir,
+          isLive: true,
+          source: liveItem.source || 'Live Market API',
+        };
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+
+    setOhlcHistory(prev => {
+      const next = { ...prev };
+      let changed = false;
+
+      for (const [id, liveItem] of Object.entries(liveMap)) {
+        const instTfs = prev[id];
+        if (!instTfs || !liveItem || !liveItem.price) continue;
+
+        const targetPrice = liveItem.price;
+        const currentSampleClose = instTfs['1m']?.[instTfs['1m'].length - 1]?.close || 0;
+
+        // If price differs significantly from initial baseline, scale history proportionately
+        const ratio = currentSampleClose > 0 && Math.abs(targetPrice - currentSampleClose) / currentSampleClose > 0.05
+          ? targetPrice / currentSampleClose
+          : 1.0;
+
+        next[id] = { ...instTfs };
+        ['1m', '5m', '15m', '1h'].forEach(tf => {
+          const bars = instTfs[tf];
+          if (!bars || bars.length === 0) return;
+
+          if (ratio !== 1.0) {
+            next[id][tf] = bars.map((b, idx) => {
+              const isLast = idx === bars.length - 1;
+              return {
+                ...b,
+                open: parseFloat((b.open * ratio).toFixed(id.includes('/') ? 4 : 2)),
+                high: parseFloat((b.high * ratio).toFixed(id.includes('/') ? 4 : 2)),
+                low: parseFloat((b.low * ratio).toFixed(id.includes('/') ? 4 : 2)),
+                close: isLast ? targetPrice : parseFloat((b.close * ratio).toFixed(id.includes('/') ? 4 : 2)),
+              };
+            });
+          } else {
+            const lastBar = bars[bars.length - 1];
+            next[id][tf] = [
+              ...bars.slice(0, -1),
+              {
+                ...lastBar,
+                high: Math.max(lastBar.high, targetPrice),
+                low: Math.min(lastBar.low, targetPrice),
+                close: targetPrice,
+              },
+            ];
+          }
+        });
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
+  return { prices, ohlcHistory, getMarketValue, applyMarketShock, updateWithLivePrices };
 }

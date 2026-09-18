@@ -1,5 +1,5 @@
 // src/components/layout/TopBar.jsx
-import { Bell, Clock, Flame } from 'lucide-react';
+import { Bell, Clock, Flame, Zap } from 'lucide-react';
 import { useMarket } from '../../context/MarketContext';
 import { ALL_INSTRUMENTS, formatPrice } from '../../data/instruments';
 import { useState, useEffect } from 'react';
@@ -47,7 +47,18 @@ function Clock24() {
 }
 
 export default function TopBar() {
-  const { prices, alerts, navigateTo, showAlertsDropdown, setShowAlertsDropdown, news, setSelectedBreakingNews } = useMarket();
+  const {
+    prices,
+    alerts,
+    navigateTo,
+    showAlertsDropdown,
+    setShowAlertsDropdown,
+    news,
+    setSelectedBreakingNews,
+    feedMode,
+    setFeedMode,
+    liveFeedStatus,
+  } = useMarket();
 
   const latestBreaking = news?.find(n => n.isBreaking && (n.impactLevel === 'CRITICAL' || n.impactLevel === 'HIGH'));
 
@@ -95,14 +106,30 @@ export default function TopBar() {
             </div>
           )}
         </div>
-        <div
-          className="topbar-market-status"
-          style={{ cursor: 'pointer' }}
-          onClick={() => navigateTo('markets')}
-          title="Go to Markets Feed"
-        >
-          <div className="live-dot" />
-          <span>LIVE</span>
+
+        {/* Real Live Market API vs Local Simulator Switcher */}
+        <div className="topbar-feed-toggle-wrap">
+          <button
+            type="button"
+            className={`feed-toggle-btn ${feedMode === 'live' ? 'active-live' : ''}`}
+            onClick={() => setFeedMode('live')}
+            title={`Real Live Market API (Yahoo, CoinGecko, ECB) • Latency: ${liveFeedStatus.latencyMs}ms`}
+          >
+            <span className={`live-status-dot ${feedMode === 'live' ? 'dot-pulse' : ''}`} />
+            <span>LIVE API</span>
+            {feedMode === 'live' && liveFeedStatus.latencyMs > 0 && (
+              <span className="feed-latency-tag text-mono">{liveFeedStatus.latencyMs}ms</span>
+            )}
+          </button>
+          <button
+            type="button"
+            className={`feed-toggle-btn ${feedMode === 'simulator' ? 'active-sim' : ''}`}
+            onClick={() => setFeedMode('simulator')}
+            title="Local Market Simulation Sandbox"
+          >
+            <Zap size={11} />
+            <span>SIMULATOR</span>
+          </button>
         </div>
       </div>
     </header>

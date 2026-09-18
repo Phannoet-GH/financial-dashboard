@@ -1,6 +1,7 @@
 // src/context/MarketContext.jsx
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useMarketSimulator } from '../hooks/useMarketSimulator';
+import { useLiveMarketFeed } from '../hooks/useLiveMarketFeed';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { useNews } from '../hooks/useNews';
 import { calculateMarketFlow, generateWhaleOrder } from '../data/marketAnalytics';
@@ -28,6 +29,15 @@ function getInitialSymbol() {
 }
 
 export function MarketProvider({ children }) {
+  // Feed mode: 'live' (Real-time Exchange API) vs 'simulator' (Local sandbox)
+  const [feedMode, setFeedModeState] = useState(() => {
+    try {
+      return localStorage.getItem('finpulse_feed_mode') || 'live';
+    } catch {
+      return 'live';
+    }
+  });
+
   // Simulator tuning options
   const [tickSpeed, setTickSpeed]       = useState(1000);   // 500, 1000, 2500
   const [isPaused, setIsPaused]         = useState(false);
@@ -37,12 +47,36 @@ export function MarketProvider({ children }) {
   const [currency, setCurrency]         = useState('USD');
   const [compactMode, setCompactMode]   = useState(false);
 
-  const { prices, ohlcHistory, getMarketValue, applyMarketShock } = useMarketSimulator({
+  const {
+    prices,
+    ohlcHistory,
+    getMarketValue,
+    applyMarketShock,
+    updateWithLivePrices,
+  } = useMarketSimulator({
     tickMs: tickSpeed,
     volatilityMultiplier: volatility,
     driftBias: marketBias,
-    isPaused,
+    isPaused: feedMode === 'live' ? false : isPaused,
   });
+
+  // Real-world market live feed hook
+  const {
+    livePrices,
+    streamsStatus,
+    feedState,
+    lastSyncTime,
+    latencyMs,
+    syncCount,
+    syncNow,
+  } = useLiveMarketFeed({ enabled: feedMode === 'live', intervalMs: 3500 });
+
+  // Sync real-world market prices into simulator engine
+  useEffect(() => {
+    if (feedMode === 'live' && livePrices && Object.keys(livePrices).length > 0) {
+      updateWithLivePrices(livePrices);
+    }
+  }, [feedMode, livePrices, updateWithLivePrices]);
 
   const { portfolioStats, buy, sell, tradeHistory, resetPortfolio } = usePortfolio(prices);
   const { news, triggerCatalyst: baseTriggerCatalyst } = useNews(prices, applyMarketShock);
@@ -346,6 +380,28 @@ export function MarketProvider({ children }) {
     return item;
   }, [baseTriggerCatalyst]);
 
+  const setFeedMode = useCallback((mode) => {
+    setFeedModeState(mode);
+    try {
+      localStorage.setItem('finpulse_feed_mode', mode);
+    } catch (_) {}
+    if (mode === 'live') {
+      addAlert('🟢 Connected to Real Live Market Feeds (Yahoo, CoinGecko, ECB)', 'info');
+    } else {
+      addAlert('⚡ Switched to Local Simulator Sandbox', 'info');
+    }
+  }, []);
+
+  const liveFeedStatus = useMemo(() => ({
+    feedState,
+    streamsStatus,
+    lastSyncTime,
+    latencyMs,
+    syncCount,
+    syncNow,
+    isLive: feedMode === 'live',
+  }), [feedState, streamsStatus, lastSyncTime, latencyMs, syncCount, syncNow, feedMode]);
+
   return (
     <MarketContext.Provider value={{
       prices, ohlcHistory, getMarketValue, applyMarketShock,
@@ -355,6 +411,7 @@ export function MarketProvider({ children }) {
       selectedBreakingNews, setSelectedBreakingNews,
       tradingSignals, getSignalForSymbol,
       tradeSignalPrefill, setTradeSignalPrefill, applySignalToTrade,
+      feedMode, setFeedMode, liveFeedStatus,
       selectedSymbol, setSelectedSymbol,
       activeView, setActiveView,
       navigateTo,

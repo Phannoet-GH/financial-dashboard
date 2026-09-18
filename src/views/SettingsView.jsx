@@ -15,6 +15,8 @@ import {
   Layers,
   Database,
   ShieldAlert,
+  Globe,
+  RefreshCw,
 } from 'lucide-react';
 import { useMarket } from '../context/MarketContext';
 import './SettingsView.css';
@@ -40,6 +42,9 @@ export default function SettingsView() {
     portfolioStats,
     addAlert,
     clearAlerts,
+    feedMode,
+    setFeedMode,
+    liveFeedStatus,
   } = useMarket();
 
   const [resetSuccess, setResetSuccess] = useState(false);
@@ -114,6 +119,130 @@ export default function SettingsView() {
 
       {/* Settings Grid */}
       <div className="settings-grid">
+        {/* Section 0: Market Data Source (Live API vs Simulator) */}
+        <div className="glass-card setting-section-card animate-fade-in-up" style={{ animationDelay: '80ms' }}>
+          <div className="panel-header">
+            <span className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Globe size={16} color="var(--green)" />
+              Market Data Provider & Live Feeds
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className={`badge ${feedMode === 'live' ? 'badge-green' : 'badge-cyan'}`}>
+                {feedMode === 'live' ? 'LIVE EXCHANGE FEEDS' : 'SIMULATOR SANDBOX'}
+              </span>
+              {liveFeedStatus.latencyMs > 0 && (
+                <span className="text-mono text-xs text-muted">
+                  {liveFeedStatus.latencyMs}ms ping
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="setting-body">
+            {/* Feed Mode Selector */}
+            <div className="setting-item">
+              <div className="setting-info">
+                <div className="setting-title">Active Market Price Mode</div>
+                <div className="setting-desc">
+                  Choose between actual real-world prices (Yahoo Finance, CoinGecko, ECB) or the client-side stochastic simulation engine.
+                </div>
+              </div>
+              <div className="setting-controls">
+                <div className="tab-bar">
+                  <button
+                    type="button"
+                    className={`tab-item${feedMode === 'live' ? ' active' : ''}`}
+                    onClick={() => setFeedMode('live')}
+                    style={feedMode === 'live' ? { color: 'var(--green)', borderColor: 'var(--green)' } : {}}
+                  >
+                    🟢 Real Live API
+                  </button>
+                  <button
+                    type="button"
+                    className={`tab-item${feedMode === 'simulator' ? ' active' : ''}`}
+                    onClick={() => setFeedMode('simulator')}
+                    style={feedMode === 'simulator' ? { color: 'var(--cyan)', borderColor: 'var(--cyan)' } : {}}
+                  >
+                    ⚡ Local Simulator
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ padding: '6px 12px', fontSize: 12, gap: 6 }}
+                  onClick={() => {
+                    liveFeedStatus.syncNow();
+                    addAlert('Refreshed real-time market API feeds', 'success');
+                  }}
+                  title="Test and force sync live market feeds"
+                >
+                  <RefreshCw size={13} />
+                  <span>Sync Now</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Live Data Streams Health Matrix */}
+            <div className="live-streams-grid">
+              <div className="live-stream-item">
+                <div className="stream-header">
+                  <span className="stream-name">US Equities</span>
+                  <span className={`badge ${liveFeedStatus.streamsStatus?.stocks?.status === 'connected' ? 'badge-green' : 'badge-amber'}`}>
+                    {(liveFeedStatus.streamsStatus?.stocks?.status || 'IDLE').toUpperCase()}
+                  </span>
+                </div>
+                <div className="stream-source text-muted text-xs">Yahoo Finance Real-Time API</div>
+                <div className="stream-stats text-mono text-xs">
+                  <span>6 Assets (AAPL, NVDA, TSLA...)</span>
+                  <span>{liveFeedStatus.streamsStatus?.stocks?.lastSync || 'Active'}</span>
+                </div>
+              </div>
+
+              <div className="live-stream-item">
+                <div className="stream-header">
+                  <span className="stream-name">Crypto Markets</span>
+                  <span className={`badge ${liveFeedStatus.streamsStatus?.crypto?.status === 'connected' ? 'badge-green' : 'badge-amber'}`}>
+                    {(liveFeedStatus.streamsStatus?.crypto?.status || 'IDLE').toUpperCase()}
+                  </span>
+                </div>
+                <div className="stream-source text-muted text-xs">CoinGecko Global Feed</div>
+                <div className="stream-stats text-mono text-xs">
+                  <span>8 Assets (BTC, ETH, SOL...)</span>
+                  <span>{liveFeedStatus.streamsStatus?.crypto?.lastSync || 'Active'}</span>
+                </div>
+              </div>
+
+              <div className="live-stream-item">
+                <div className="stream-header">
+                  <span className="stream-name">Precious Metals</span>
+                  <span className={`badge ${liveFeedStatus.streamsStatus?.commodities?.status === 'connected' ? 'badge-green' : 'badge-amber'}`}>
+                    {(liveFeedStatus.streamsStatus?.commodities?.status || 'IDLE').toUpperCase()}
+                  </span>
+                </div>
+                <div className="stream-source text-muted text-xs">PAX Gold 1:1 Physical Vault Reserve</div>
+                <div className="stream-stats text-mono text-xs">
+                  <span>Spot Gold (XAU) & Silver (XAG)</span>
+                  <span>{liveFeedStatus.streamsStatus?.commodities?.lastSync || 'Active'}</span>
+                </div>
+              </div>
+
+              <div className="live-stream-item">
+                <div className="stream-header">
+                  <span className="stream-name">Forex Currencies</span>
+                  <span className={`badge ${liveFeedStatus.streamsStatus?.forex?.status === 'connected' ? 'badge-green' : 'badge-amber'}`}>
+                    {(liveFeedStatus.streamsStatus?.forex?.status || 'IDLE').toUpperCase()}
+                  </span>
+                </div>
+                <div className="stream-source text-muted text-xs">European Central Bank (ECB / Frankfurter)</div>
+                <div className="stream-stats text-mono text-xs">
+                  <span>3 Pairs (EUR, GBP, JPY)</span>
+                  <span>{liveFeedStatus.streamsStatus?.forex?.lastSync || 'Active'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Section 1: Market Simulation Engine Tuning */}
         <div className="glass-card setting-section-card animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <div className="panel-header">
