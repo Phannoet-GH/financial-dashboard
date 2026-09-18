@@ -1,0 +1,196 @@
+/* src/components/widgets/AlertToast.css */
+.alert-toast-container {
+  position: fixed;
+  top: 72px;
+  right: 24px;
+  z-index: 9999;
+  pointer-events: auto;
+  max-width: 360px;
+  width: 100%;
+}
+
+.alert-toast-card {
+  position: relative;
+  overflow: hidden;
+  background: rgba(14, 20, 32, 0.95);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(0, 212, 255, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px 14px;
+  backdrop-filter: blur(20px);
+}
+
+@keyframes toastSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(40px) scale(0.95);
+  }
+  70% {
+    transform: translateX(-4px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.animate-toast-slide {
+  animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.toast-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.toast-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toast-icon-pulse {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulseGlow 1.8s infinite;
+}
+
+.icon-bullish {
+  background: rgba(0, 255, 136, 0.18);
+  color: var(--green);
+  border: 1px solid rgba(0, 255, 136, 0.35);
+}
+
+.icon-bearish {
+  background: rgba(255, 71, 87, 0.18);
+  color: var(--red);
+  border: 1px solid rgba(255, 71, 87, 0.35);
+}
+
+.toast-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--cyan);
+}
+
+.toast-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.toast-close-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.toast-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+
+.toast-symbol-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toast-sym-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.toast-dir-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.toast-price-info {
+  text-align: right;
+}
+
+.toast-price-val {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.toast-note {
+  font-style: italic;
+  margin-bottom: 10px;
+  padding: 0 4px;
+}
+
+.toast-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-toast-action {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: rgba(0, 212, 255, 0.15);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  color: var(--cyan);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-toast-action:hover {
+  background: rgba(0, 212, 255, 0.28);
+  border-color: var(--cyan);
+  transform: translateY(-1px);
+}
+
+.toast-progress-track {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.toast-progress-fill {
+  height: 100%;
+  transition: width 0.05s linear;
+}
+
+.fill-green {
+  background: var(--green);
+}
+
+.fill-amber {
+  background: var(--amber);
+}

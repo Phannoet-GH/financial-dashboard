@@ -1,5 +1,5 @@
 // src/components/layout/TopBar.jsx
-import { Bell, Clock, Flame, Zap } from 'lucide-react';
+import { Bell, Clock, Flame, Zap, Volume2, VolumeX, Trash2, ArrowRight } from 'lucide-react';
 import { useMarket } from '../../context/MarketContext';
 import { ALL_INSTRUMENTS, formatPrice } from '../../data/instruments';
 import { useState, useEffect } from 'react';
@@ -50,6 +50,10 @@ export default function TopBar() {
   const {
     prices,
     alerts,
+    clearAlerts,
+    priceTriggers,
+    togglePriceTrigger,
+    removePriceTrigger,
     navigateTo,
     showAlertsDropdown,
     setShowAlertsDropdown,
@@ -58,9 +62,12 @@ export default function TopBar() {
     feedMode,
     setFeedMode,
     liveFeedStatus,
+    soundEnabled,
+    setSoundEnabled,
   } = useMarket();
 
   const latestBreaking = news?.find(n => n.isBreaking && (n.impactLevel === 'CRITICAL' || n.impactLevel === 'HIGH'));
+  const activeTriggers = priceTriggers.filter(t => t.active);
 
   return (
     <header className="topbar">
@@ -82,27 +89,105 @@ export default function TopBar() {
           </div>
         )}
         <Clock24 />
+
+        {/* Sound Toggle Icon */}
+        <button
+          className={`topbar-icon-btn ${soundEnabled ? 'sound-active' : 'sound-muted'}`}
+          onClick={() => setSoundEnabled(s => !s)}
+          title={soundEnabled ? 'Alert Audio: ON (Click to Mute)' : 'Alert Audio: MUTED (Click to Enable)'}
+        >
+          {soundEnabled ? <Volume2 size={15} color="var(--cyan)" /> : <VolumeX size={15} color="var(--text-muted)" />}
+        </button>
+
+        {/* Notifications & Price Alerts Dropdown */}
         <div style={{ position: 'relative' }}>
           <button
-            className="topbar-icon-btn"
+            className={`topbar-icon-btn ${showAlertsDropdown ? 'active' : ''}`}
             onClick={() => setShowAlertsDropdown(s => !s)}
-            title="Toggle Notifications"
+            title="Price Alerts & Notifications"
           >
             <Bell size={15} />
-            {alerts.length > 0 && <span className="topbar-alert-dot">{alerts.length}</span>}
+            {(alerts.length > 0 || activeTriggers.length > 0) && (
+              <span className="topbar-alert-dot">{activeTriggers.length || alerts.length}</span>
+            )}
           </button>
-          {showAlertsDropdown && alerts.length > 0 && (
+
+          {showAlertsDropdown && (
             <div className="alert-dropdown animate-fade-in">
-              <div style={{ padding: '8px 12px', fontSize: 11, fontWeight: 700, borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between' }}>
-                <span>NOTIFICATIONS</span>
-                <span className="text-muted" style={{ cursor: 'pointer' }} onClick={() => setShowAlertsDropdown(false)}>✕</span>
-              </div>
-              {alerts.map(a => (
-                <div key={a.id} className={`alert-item alert-${a.type}`}>
-                  <span>{a.msg}</span>
-                  <span className="alert-time text-mono">{a.time}</span>
+              <div className="alert-dropdown-header">
+                <div className="alert-dropdown-title">
+                  <Bell size={13} color="var(--cyan)" />
+                  <span>PRICE ALERTS & NOTIFICATIONS</span>
                 </div>
-              ))}
+                <div className="alert-dropdown-actions">
+                  <button
+                    className="alert-link-btn"
+                    onClick={() => {
+                      setShowAlertsDropdown(false);
+                      navigateTo('alerts');
+                    }}
+                    title="Open Alerts Center"
+                  >
+                    Open Center <ArrowRight size={11} />
+                  </button>
+                  <button
+                    className="alert-close-btn"
+                    onClick={() => setShowAlertsDropdown(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              {/* Active Watchers Subheader */}
+              {activeTriggers.length > 0 && (
+                <div className="alert-dropdown-section">
+                  <div className="alert-section-title">ACTIVE WATCHERS ({activeTriggers.length})</div>
+                  {activeTriggers.slice(0, 4).map(t => (
+                    <div key={t.id} className="topbar-watcher-item">
+                      <div className="watcher-info">
+                        <span className="watcher-sym" onClick={() => { setShowAlertsDropdown(false); navigateTo('markets', t.symbol); }}>
+                          {t.symbol}
+                        </span>
+                        <span className="watcher-rule text-mono">
+                          {t.condition === 'gte' ? '≥' : '≤'} ${t.targetPrice.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="watcher-actions">
+                        <button
+                          className="btn-watcher-del"
+                          onClick={() => removePriceTrigger(t.id)}
+                          title="Remove alert"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Notifications Stream */}
+              <div className="alert-dropdown-section">
+                <div className="alert-section-title-row">
+                  <span className="alert-section-title">TRIGGER LOG ({alerts.length})</span>
+                  {alerts.length > 0 && (
+                    <button className="btn-clear-alerts" onClick={clearAlerts}>Clear</button>
+                  )}
+                </div>
+                <div className="alert-dropdown-list">
+                  {alerts.length === 0 ? (
+                    <div className="alert-empty-text text-muted text-xs">No recent notifications</div>
+                  ) : (
+                    alerts.slice(0, 8).map(a => (
+                      <div key={a.id} className={`alert-item alert-${a.type}`}>
+                        <span className="alert-msg-text">{a.msg}</span>
+                        <span className="alert-time text-mono">{a.time}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>

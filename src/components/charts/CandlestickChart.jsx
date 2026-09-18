@@ -5,13 +5,24 @@ import { useMarket } from '../../context/MarketContext';
 import { ALL_INSTRUMENTS, formatPrice } from '../../data/instruments';
 import { calculateMovingDirection } from '../../data/marketAnalytics';
 import { calculateTradingSignal } from '../../data/marketSignals';
-import { Compass, Zap, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { Compass, Zap, ShieldCheck, ChevronDown, ChevronUp, Bell, Radio, Check } from 'lucide-react';
 import './CandlestickChart.css';
 
 const INTERVALS = ['1m', '5m', '15m', '1h'];
 
 export default function CandlestickChart() {
-  const { prices, ohlcHistory, selectedSymbol, setSelectedSymbol, marketFlowData, navigateTo, applySignalToTrade } = useMarket();
+  const {
+    prices,
+    ohlcHistory,
+    selectedSymbol,
+    setSelectedSymbol,
+    marketFlowData,
+    navigateTo,
+    applySignalToTrade,
+    feedMode,
+    quickAddAlert,
+  } = useMarket();
+
   const containerRef = useRef(null);
   const chartRef     = useRef(null);
   const seriesRef    = useRef(null);
@@ -19,6 +30,11 @@ export default function CandlestickChart() {
   const [interval, setInterval_] = useState('1m');
   const [ohlc, setOhlc] = useState(null);
   const [showReasons, setShowReasons] = useState(false);
+
+  // Live Historical Candles state from real public APIs
+  const [liveCandles, setLiveCandles] = useState(null);
+  const [liveSource, setLiveSource] = useState(null);
+  const [alertSetSuccess, setAlertSetSuccess] = useState(false);
 
   // Create chart once
   useEffect(() => {
@@ -104,22 +120,52 @@ export default function CandlestickChart() {
     };
   }, []);
 
-  const lastKeyRef = useRef({ symbol: null, interval: null });
-
-  // Synchronize candlestick data with selectedSymbol, interval, and live updates
+  // Fetch real historical candles when in Live Mode
   useEffect(() => {
-    const instData = ohlcHistory[selectedSymbol];
-    if (!instData || !seriesRef.current) return;
+    if (feedMode !== 'live') {
+      setLiveCandles(null);
+      setLiveSource(null);
+      return;
+    }
 
-    const hist = instData[interval] || instData['1m'] || (Array.isArray(instData) ? instData : []);
+    let isMounted = true;
+    async function loadLiveHistory() {
+      try {
+        const res = await fetch(`/api/live/history?symbol=${selectedSymbol}&interval=${interval}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && Array.isArray(data.candles) && data.candles.length > 0) {
+            setLiveCandles(data.candles);
+            setLiveSource(data.source);
+          }
+        }
+      } catch (_e) {
+        // Fall back gracefully to simulator history
+      }
+    }
+
+    loadLiveHistory();
+    return () => { isMounted = false; };
+  }, [selectedSymbol, interval, feedMode]);
+
+  const lastKeyRef = useRef({ symbol: null, interval: null, feedMode: null });
+
+  // Synchronize candlestick data with selectedSymbol, interval, live history, and ticks
+  useEffect(() => {
+    if (!seriesRef.current) return;
+
+    const instData = ohlcHistory[selectedSymbol];
+    const syntheticHist = instData ? (instData[interval] || instData['1m'] || (Array.isArray(instData) ? instData : [])) : [];
+    const hist = (feedMode === 'live' && liveCandles && liveCandles.length > 0) ? liveCandles : syntheticHist;
+
     if (!hist || hist.length === 0) return;
 
-    const currentKey = `${selectedSymbol}-${interval}`;
-    const prevKey    = `${lastKeyRef.current.symbol}-${lastKeyRef.current.interval}`;
+    const currentKey = `${selectedSymbol}-${interval}-${feedMode}-${liveCandles ? 'live' : 'sim'}`;
+    const prevKey    = `${lastKeyRef.current.symbol}-${lastKeyRef.current.interval}-${lastKeyRef.current.feedMode}-${lastKeyRef.current.source}`;
 
-    // If symbol or interval changed: do a full reload with setData and fit content
+    // If symbol, interval, or source changed: do a full reload with setData and fit content
     if (currentKey !== prevKey) {
-      lastKeyRef.current = { symbol: selectedSymbol, interval };
+      lastKeyRef.current = { symbol: selectedSymbol, interval, feedMode, source: liveCandles ? 'live' : 'sim' };
       seriesRef.current.setData(hist);
       volSeriesRef.current?.setData(hist.map(c => ({
         time:  c.time,
@@ -147,23 +193,34 @@ export default function CandlestickChart() {
     });
 
     setOhlc({ open: last.open, high: last.high, low: last.low, close: last.close });
-  }, [selectedSymbol, interval, ohlcHistory, prices]);
+  }, [selectedSymbol, interval, ohlcHistory, prices, feedMode, liveCandles]);
 
   const p = prices[selectedSymbol];
-  const bars = ohlcHistory[selectedSymbol]?.[interval] || [];
+  const activeBars = (feedMode === 'live' && liveCandles && liveCandles.length > 0)
+    ? liveCandles
+    : (ohlcHistory[selectedSymbol]?.[interval] || []);
+
   const directionData = useMemo(() => {
-    return calculateMovingDirection(selectedSymbol, p, bars);
-  }, [selectedSymbol, p, bars]);
+    return calculateMovingDirection(selectedSymbol, p, activeBars);
+  }, [selectedSymbol, p, activeBars]);
+
   const assetFlow = marketFlowData?.assetFlows?.[selectedSymbol];
 
   const currentSignal = useMemo(() => {
-    return calculateTradingSignal(selectedSymbol, p, bars, assetFlow);
-  }, [selectedSymbol, p, bars, assetFlow]);
+    return calculateTradingSignal(selectedSymbol, p, activeBars, assetFlow);
+  }, [selectedSymbol, p, activeBars, assetFlow]);
 
   function handleIntervalChange(iv) {
     setInterval_(iv);
-    // Reset key so useEffect triggers immediate data reload for the new timeframe
-    lastKeyRef.current = { symbol: null, interval: null };
+    lastKeyRef.current = { symbol: null, interval: null, feedMode: null };
+  }
+
+  function handleQuickAlert() {
+    if (!p) return;
+    const target = p.price >= 5 ? parseFloat((p.price * 1.02).toFixed(2)) : parseFloat((p.price * 1.01).toFixed(4));
+    quickAddAlert(selectedSymbol, target, 'gte', `Quick alert +2% for ${selectedSymbol}`);
+    setAlertSetSuccess(true);
+    setTimeout(() => setAlertSetSuccess(false), 2200);
   }
 
   return (
@@ -176,7 +233,7 @@ export default function CandlestickChart() {
             value={selectedSymbol}
             onChange={e => {
               setSelectedSymbol(e.target.value);
-              lastKeyRef.current = { symbol: null, interval: null };
+              lastKeyRef.current = { symbol: null, interval: null, feedMode: null };
             }}
           >
             {ALL_INSTRUMENTS.map(i => (
@@ -194,6 +251,20 @@ export default function CandlestickChart() {
               </span>
             </div>
           )}
+
+          {/* Data Source Indicator */}
+          {feedMode === 'live' ? (
+            <span className="chart-source-badge source-live" title="Streaming real-time historical candlesticks">
+              <Radio size={10} className="dot-pulse" />
+              <span>{liveSource ? liveSource.replace('(Real-Time)', '').trim() : 'Live Feeds'}</span>
+            </span>
+          ) : (
+            <span className="chart-source-badge source-sim" title="Simulated price action sandbox">
+              <Zap size={10} />
+              <span>Simulated</span>
+            </span>
+          )}
+
           {directionData && (
             <div
               className="chart-direction-pill"
@@ -216,6 +287,17 @@ export default function CandlestickChart() {
           )}
         </div>
         <div className="chart-header-right">
+          {/* Quick Alert Button */}
+          <button
+            type="button"
+            className={`btn-chart-quick-alert ${alertSetSuccess ? 'success' : ''}`}
+            onClick={handleQuickAlert}
+            title={`Set instant +2% breakout alert at $${p ? (p.price * 1.02).toFixed(2) : ''}`}
+          >
+            {alertSetSuccess ? <Check size={12} /> : <Bell size={12} />}
+            <span>{alertSetSuccess ? 'Alert Armed!' : '+ Set Alert'}</span>
+          </button>
+
           {ohlc && (
             <div className="ohlc-row">
               <span>O <b className="text-mono">{ohlc.open.toFixed(2)}</b></span>

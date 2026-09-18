@@ -15,11 +15,14 @@ export default function AlertsView() {
     removePriceTrigger,
     togglePriceTrigger,
     navigateTo,
+    soundEnabled,
+    setSoundEnabled,
   } = useMarket();
 
   const [selectedSym, setSelectedSym] = useState('BTC');
   const [condition, setCondition]     = useState('gte'); // 'gte' | 'lte'
   const [targetPrice, setTargetPrice] = useState('');
+  const [triggerNote, setTriggerNote] = useState('');
   const [historyFilter, setHistoryFilter] = useState('all');
 
   const curInst = ALL_INSTRUMENTS.find(i => i.id === selectedSym);
@@ -29,8 +32,9 @@ export default function AlertsView() {
     e.preventDefault();
     const priceNum = parseFloat(targetPrice);
     if (!priceNum || priceNum <= 0) return;
-    addPriceTrigger(selectedSym, condition, priceNum);
+    addPriceTrigger(selectedSym, condition, priceNum, triggerNote);
     setTargetPrice('');
+    setTriggerNote('');
   }
 
   function setPresetOffset(pct) {
@@ -171,6 +175,18 @@ export default function AlertsView() {
                 <button type="button" className="btn btn-ghost preset-btn" onClick={() => setPresetOffset(-5)}>-5%</button>
               </div>
 
+              {/* Optional Custom Note */}
+              <div className="form-group" style={{ marginBottom: 8 }}>
+                <label className="form-label">Alert Note / Catalyst Reason (Optional)</label>
+                <input
+                  type="text"
+                  className="input w-full"
+                  placeholder="e.g. Breakout above key resistance, Dip buy target..."
+                  value={triggerNote}
+                  onChange={e => setTriggerNote(e.target.value)}
+                />
+              </div>
+
               <button
                 type="submit"
                 className="btn btn-primary w-full"
@@ -231,6 +247,11 @@ export default function AlertsView() {
                             {diff >= 0 ? `${pctDistance}% below target` : `${pctDistance}% above target`}
                           </span>
                         </div>
+                        {trig.note && (
+                          <div className="text-xs text-muted" style={{ fontStyle: 'italic', marginTop: 2 }}>
+                            "{trig.note}"
+                          </div>
+                        )}
                       </div>
 
                       <div className="trigger-actions">

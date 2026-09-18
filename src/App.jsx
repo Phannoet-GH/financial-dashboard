@@ -9,6 +9,7 @@ import PortfolioView from './views/PortfolioView';
 import AlertsView from './views/AlertsView';
 import SettingsView from './views/SettingsView';
 import BreakingNewsModal from './components/widgets/BreakingNewsModal';
+import AlertToast from './components/widgets/AlertToast';
 import './App.css';
 
 function ViewRouter() {
@@ -34,6 +35,7 @@ export default function App() {
         </div>
       </div>
       <BreakingNewsModal />
+      <AlertToast />
     </div>
   );
 }

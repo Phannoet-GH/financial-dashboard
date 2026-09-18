@@ -1,7 +1,9 @@
 // src/context/MarketContext.jsx
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useMarketSimulator } from '../hooks/useMarketSimulator';
+import { ALL_INSTRUMENTS } from '../data/instruments';
 import { useLiveMarketFeed } from '../hooks/useLiveMarketFeed';
+import { playAlertChime } from '../utils/audioAlert';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { useNews } from '../hooks/useNews';
 import { calculateMarketFlow, generateWhaleOrder } from '../data/marketAnalytics';
@@ -147,25 +149,35 @@ export function MarketProvider({ children }) {
     addAlert(`🎯 Applied ${signal.signal} Signal for ${signal.symbol} (TP: $${signal.tp1} | SL: $${signal.stopLoss})`, 'info');
   }, [navigateTo]);
 
-  // Price Triggers Engine
+  // Price Triggers Engine & Active Toast Notification State
+  const [activeAlertToast, setActiveAlertToast] = useState(null);
+  const dismissAlertToast = useCallback(() => setActiveAlertToast(null), []);
+
   const [priceTriggers, setPriceTriggers] = useState([
-    { id: 'trig-1', symbol: 'BTC', condition: 'gte', targetPrice: 70000, active: true, createdAt: '08:00 AM' },
-    { id: 'trig-2', symbol: 'NVDA', condition: 'gte', targetPrice: 900, active: true, createdAt: '08:15 AM' },
-    { id: 'trig-3', symbol: 'AAPL', condition: 'lte', targetPrice: 185, active: true, createdAt: '08:20 AM' },
+    { id: 'trig-1', symbol: 'BTC', condition: 'gte', targetPrice: 85000, active: true, createdAt: '08:00 AM', note: 'Breakout above $85k' },
+    { id: 'trig-2', symbol: 'NVDA', condition: 'gte', targetPrice: 900, active: true, createdAt: '08:15 AM', note: 'Key resistance retest' },
+    { id: 'trig-3', symbol: 'AAPL', condition: 'lte', targetPrice: 185, active: true, createdAt: '08:20 AM', note: 'Demand zone dip' },
   ]);
 
-  function addPriceTrigger(symbol, condition, targetPrice) {
+  function addPriceTrigger(symbol, condition, targetPrice, note = '') {
+    const num = parseFloat(targetPrice);
+    if (!num || num <= 0) return;
     const newTrig = {
       id: `trig-${Date.now()}`,
       symbol,
       condition, // 'gte' | 'lte'
-      targetPrice: parseFloat(targetPrice),
+      targetPrice: num,
       active: true,
+      note: note.trim(),
       createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
     setPriceTriggers(prev => [newTrig, ...prev]);
     addAlert(`Alert created for ${symbol} ${condition === 'gte' ? '≥' : '≤'} $${targetPrice}`, 'info');
   }
+
+  const quickAddAlert = useCallback((symbol, targetPrice, condition = 'gte', note = '') => {
+    addPriceTrigger(symbol, condition, targetPrice, note);
+  }, []);
 
   function removePriceTrigger(id) {
     setPriceTriggers(prev => prev.filter(t => t.id !== id));
@@ -187,17 +199,35 @@ export function MarketProvider({ children }) {
         : p.price <= trig.targetPrice;
 
       if (hit) {
+        // 1. Play audio chime if sound enabled
+        if (soundEnabled) {
+          playAlertChime(trig.condition === 'gte' ? 'success' : 'warning');
+        }
+
+        // 2. Trigger high-visibility toast banner
+        setActiveAlertToast({
+          id: Date.now(),
+          symbol: trig.symbol,
+          price: p.price,
+          targetPrice: trig.targetPrice,
+          condition: trig.condition,
+          note: trig.note || null,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        });
+
+        // 3. Add to notifications history log
         addAlert(
-          `PRICE ALERT: ${trig.symbol} hit $${p.price.toFixed(2)} (${trig.condition === 'gte' ? '≥' : '≤'} $${trig.targetPrice})`,
+          `🎯 PRICE ALERT: ${trig.symbol} hit $${p.price.toFixed(2)} (${trig.condition === 'gte' ? '≥' : '≤'} $${trig.targetPrice})`,
           'warning'
         );
-        // Deactivate trigger so it does not spam every tick
+
+        // 4. Deactivate trigger so it does not spam every tick
         setPriceTriggers(prev =>
           prev.map(t => (t.id === trig.id ? { ...t, active: false, triggeredAt: new Date().toLocaleTimeString() } : t))
         );
       }
     });
-  }, [prices]);
+  }, [prices, soundEnabled, priceTriggers]);
 
   // Listen to browser forward/back buttons & hashchange
   useEffect(() => {
@@ -418,6 +448,7 @@ export function MarketProvider({ children }) {
       alerts, addAlert, clearAlerts,
       showAlertsDropdown, setShowAlertsDropdown,
       priceTriggers, addPriceTrigger, removePriceTrigger, togglePriceTrigger,
+      activeAlertToast, dismissAlertToast, quickAddAlert,
       tpSlOrders, addTpSlOrder, removeTpSlOrder,
       pendingLimitOrders, addLimitOrder, cancelLimitOrder,
       tickSpeed, setTickSpeed,
