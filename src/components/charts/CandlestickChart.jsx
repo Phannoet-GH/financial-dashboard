@@ -36,6 +36,9 @@ export default function CandlestickChart() {
   const [liveSource, setLiveSource] = useState(null);
   const [alertSetSuccess, setAlertSetSuccess] = useState(false);
 
+  // Active instrument live price quote
+  const p = prices[selectedSymbol];
+
   // Create chart once
   useEffect(() => {
     if (!containerRef.current) return;
@@ -120,6 +123,22 @@ export default function CandlestickChart() {
     };
   }, []);
 
+  // Sanitize and deduplicate candles ensuring strictly ascending timestamps
+  function sanitizeCandles(candles) {
+    if (!Array.isArray(candles) || candles.length === 0) return [];
+    const sorted = [...candles].sort((a, b) => a.time - b.time);
+    const deduped = [];
+    for (let i = 0; i < sorted.length; i++) {
+      const cur = sorted[i];
+      if (i === 0 || cur.time > deduped[deduped.length - 1].time) {
+        deduped.push(cur);
+      } else if (cur.time === deduped[deduped.length - 1].time) {
+        deduped[deduped.length - 1] = cur;
+      }
+    }
+    return deduped;
+  }
+
   // Fetch real historical candles when in Live Mode
   useEffect(() => {
     if (feedMode !== 'live') {
@@ -129,6 +148,9 @@ export default function CandlestickChart() {
     }
 
     let isMounted = true;
+    setLiveCandles(null);
+    setLiveSource(null);
+
     async function loadLiveHistory() {
       try {
         const res = await fetch(`/api/live/history?symbol=${selectedSymbol}&interval=${interval}`);
@@ -148,7 +170,8 @@ export default function CandlestickChart() {
     return () => { isMounted = false; };
   }, [selectedSymbol, interval, feedMode]);
 
-  const lastKeyRef = useRef({ symbol: null, interval: null, feedMode: null });
+  const lastKeyRef = useRef({ symbol: null, interval: null, feedMode: null, source: null });
+  const lastLoadedTimeRef = useRef(0);
 
   // Synchronize candlestick data with selectedSymbol, interval, live history, and ticks
   useEffect(() => {
@@ -156,9 +179,11 @@ export default function CandlestickChart() {
 
     const instData = ohlcHistory[selectedSymbol];
     const syntheticHist = instData ? (instData[interval] || instData['1m'] || (Array.isArray(instData) ? instData : [])) : [];
-    const hist = (feedMode === 'live' && liveCandles && liveCandles.length > 0) ? liveCandles : syntheticHist;
+    const rawHist = (feedMode === 'live' && liveCandles && liveCandles.length > 0) ? liveCandles : syntheticHist;
 
-    if (!hist || hist.length === 0) return;
+    if (!rawHist || rawHist.length === 0) return;
+    const hist = sanitizeCandles(rawHist);
+    if (hist.length === 0) return;
 
     const currentKey = `${selectedSymbol}-${interval}-${feedMode}-${liveCandles ? 'live' : 'sim'}`;
     const prevKey    = `${lastKeyRef.current.symbol}-${lastKeyRef.current.interval}-${lastKeyRef.current.feedMode}-${lastKeyRef.current.source}`;
@@ -166,18 +191,21 @@ export default function CandlestickChart() {
     // If symbol, interval, or source changed: do a full reload with setData and fit content
     if (currentKey !== prevKey) {
       lastKeyRef.current = { symbol: selectedSymbol, interval, feedMode, source: liveCandles ? 'live' : 'sim' };
-      seriesRef.current.setData(hist);
-      volSeriesRef.current?.setData(hist.map(c => ({
-        time:  c.time,
-        value: c.volume,
-        color: c.close >= c.open ? 'rgba(0,255,136,0.25)' : 'rgba(255,71,87,0.25)',
-      })));
-      chartRef.current?.timeScale().fitContent();
+      try {
+        seriesRef.current.setData(hist);
+        volSeriesRef.current?.setData(hist.map(c => ({
+          time:  c.time,
+          value: c.volume,
+          color: c.close >= c.open ? 'rgba(0,255,136,0.25)' : 'rgba(255,71,87,0.25)',
+        })));
+        chartRef.current?.timeScale().fitContent();
 
-      const last = hist[hist.length - 1];
-      if (last) {
-        setOhlc({ open: last.open, high: last.high, low: last.low, close: last.close });
-      }
+        const last = hist[hist.length - 1];
+        if (last) {
+          lastLoadedTimeRef.current = last.time;
+          setOhlc({ open: last.open, high: last.high, low: last.low, close: last.close });
+        }
+      } catch (_err) {}
       return;
     }
 
@@ -185,17 +213,38 @@ export default function CandlestickChart() {
     const last = hist[hist.length - 1];
     if (!last) return;
 
-    seriesRef.current.update(last);
-    volSeriesRef.current?.update({
-      time:  last.time,
-      value: last.volume,
-      color: last.close >= last.open ? 'rgba(0,255,136,0.25)' : 'rgba(255,71,87,0.25)',
-    });
+    const curPrice = p ? p.price : last.close;
+    const updatedLast = {
+      ...last,
+      high:  Math.max(last.high, curPrice),
+      low:   Math.min(last.low, curPrice),
+      close: curPrice,
+    };
 
-    setOhlc({ open: last.open, high: last.high, low: last.low, close: last.close });
-  }, [selectedSymbol, interval, ohlcHistory, prices, feedMode, liveCandles]);
+    try {
+      if (lastLoadedTimeRef.current && updatedLast.time >= lastLoadedTimeRef.current) {
+        seriesRef.current.update(updatedLast);
+        volSeriesRef.current?.update({
+          time:  updatedLast.time,
+          value: updatedLast.volume,
+          color: updatedLast.close >= updatedLast.open ? 'rgba(0,255,136,0.25)' : 'rgba(255,71,87,0.25)',
+        });
+        lastLoadedTimeRef.current = updatedLast.time;
+      } else {
+        // Time is strictly before current series end: reload cleanly
+        seriesRef.current.setData(hist);
+        lastLoadedTimeRef.current = updatedLast.time;
+      }
+    } catch (_updateErr) {
+      try {
+        seriesRef.current.setData(hist);
+        lastLoadedTimeRef.current = updatedLast.time;
+      } catch (_) {}
+    }
 
-  const p = prices[selectedSymbol];
+    setOhlc({ open: updatedLast.open, high: updatedLast.high, low: updatedLast.low, close: updatedLast.close });
+  }, [selectedSymbol, interval, ohlcHistory, prices, feedMode, liveCandles, p]);
+
   const activeBars = (feedMode === 'live' && liveCandles && liveCandles.length > 0)
     ? liveCandles
     : (ohlcHistory[selectedSymbol]?.[interval] || []);
