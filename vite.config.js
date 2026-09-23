@@ -13,7 +13,7 @@ const marketCache = {
   },
 };
 
-const CACHE_TTL_MS = 4000; // 4 second cache
+const CACHE_TTL_MS = 2000; // 2 second cache
 
 async function fetchLiveMarketData() {
   const now = Date.now();
@@ -150,14 +150,23 @@ async function fetchLiveMarketData() {
           updatedAt: new Date().toISOString(),
         };
       }
-      marketCache.streams.forex = { status: 'connected', count: 3, lastSync: new Date().toLocaleTimeString() };
+      if (fx.rates?.CHF) {
+        updatedData['USD/CHF'] = {
+          price: parseFloat(fx.rates.CHF.toFixed(4)),
+          changePct: 0.05,
+          volume: 45000000,
+          source: 'European Central Bank (ECB)',
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      marketCache.streams.forex = { status: 'connected', count: 4, lastSync: new Date().toLocaleTimeString() };
     }
   } catch (_e) {
     marketCache.streams.forex.status = 'degraded';
   }
 
-  // 3. Fetch US Stocks from Yahoo Finance
-  const stockSymbols = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN', 'GOOGL'];
+  // 3. Fetch all US Stocks from Yahoo Finance
+  const stockSymbols = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'META', 'TSLA', 'JPM', 'JNJ', 'XOM'];
   try {
     await Promise.all(
       stockSymbols.map(async (sym) => {
@@ -173,6 +182,7 @@ async function fetchLiveMarketData() {
               const changePct = prev > 0 ? ((meta.regularMarketPrice - prev) / prev) * 100 : 0;
               updatedData[sym] = {
                 price: meta.regularMarketPrice,
+                open: prev,
                 changePct: parseFloat(changePct.toFixed(2)),
                 high: meta.regularMarketDayHigh || meta.regularMarketPrice,
                 low: meta.regularMarketDayLow || meta.regularMarketPrice,
@@ -213,19 +223,20 @@ async function fetchLiveCandleHistory(symbol, interval = '15m') {
   const yfSymbolMap = {
     // Stocks
     AAPL: 'AAPL',
-    NVDA: 'NVDA',
-    TSLA: 'TSLA',
     MSFT: 'MSFT',
-    AMZN: 'AMZN',
+    NVDA: 'NVDA',
     GOOGL: 'GOOGL',
+    AMZN: 'AMZN',
+    META: 'META',
+    TSLA: 'TSLA',
+    JPM: 'JPM',
+    JNJ: 'JNJ',
+    XOM: 'XOM',
     // Crypto
     BTC: 'BTC-USD',
     ETH: 'ETH-USD',
     SOL: 'SOL-USD',
     BNB: 'BNB-USD',
-    XRP: 'XRP-USD',
-    ADA: 'ADA-USD',
-    DOGE: 'DOGE-USD',
     AVAX: 'AVAX-USD',
     // Commodities
     'XAU/USD': 'GC=F',
@@ -234,6 +245,7 @@ async function fetchLiveCandleHistory(symbol, interval = '15m') {
     'EUR/USD': 'EURUSD=X',
     'GBP/USD': 'GBPUSD=X',
     'USD/JPY': 'JPY=X',
+    'USD/CHF': 'CHF=X',
   };
 
   const yfSymbol = yfSymbolMap[symbol] || symbol;

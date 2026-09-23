@@ -112,6 +112,7 @@ export function useMarketSimulator(options = {}) {
   const volatilityMultiplier = options.volatilityMultiplier ?? 1.0;
   const driftBias = options.driftBias ?? 0.0002;
   const isPaused = options.isPaused ?? false;
+  const isLiveMode = options.isLiveMode ?? false;
 
   const [prices, setPrices]         = useState(() => buildInitialPriceMap());
   const [ohlcHistory, setOhlcHistory] = useState({});
@@ -132,9 +133,9 @@ export function useMarketSimulator(options = {}) {
     setOhlcHistory(hist);
   }, []);
 
-  // Tick engine
+  // Tick engine - only runs random walk simulation when NOT in Live API mode
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || isLiveMode) return;
 
     const interval = setInterval(() => {
       setPrices(prev => {
@@ -207,7 +208,7 @@ export function useMarketSimulator(options = {}) {
     }, tickMs);
 
     return () => clearInterval(interval);
-  }, [tickMs, volatilityMultiplier, driftBias, isPaused]);
+  }, [tickMs, volatilityMultiplier, driftBias, isPaused, isLiveMode]);
 
   // Portfolio market value recalc helper
   const getMarketValue = useCallback((holdings) => {
@@ -298,14 +299,17 @@ export function useMarketSimulator(options = {}) {
         if (!cur || !liveItem || !liveItem.price) continue;
 
         const newP = liveItem.price;
-        const change = (liveItem.changePct / 100) * newP;
+        const changePct = liveItem.changePct !== undefined ? liveItem.changePct : cur.changePct;
+        const openPrice = liveItem.open || (changePct !== 0 ? newP / (1 + changePct / 100) : newP);
+        const change = newP - openPrice;
         const dir = newP > cur.price ? 'up' : newP < cur.price ? 'down' : cur.direction;
 
         next[id] = {
           ...cur,
           prevPrice: cur.price,
           price: newP,
-          changePct: liveItem.changePct !== undefined ? liveItem.changePct : cur.changePct,
+          open: parseFloat(openPrice.toFixed(id.includes('/') ? 4 : 2)),
+          changePct: parseFloat(changePct.toFixed(2)),
           change: parseFloat(change.toFixed(id.includes('/') ? 4 : 2)),
           high: liveItem.high ? Math.max(liveItem.high, newP) : Math.max(cur.high, newP),
           low: liveItem.low ? Math.min(liveItem.low, newP) : Math.min(cur.low, newP),
@@ -313,6 +317,7 @@ export function useMarketSimulator(options = {}) {
           direction: dir,
           isLive: true,
           source: liveItem.source || 'Live Market API',
+          updatedAt: liveItem.updatedAt || new Date().toISOString(),
         };
         changed = true;
       }

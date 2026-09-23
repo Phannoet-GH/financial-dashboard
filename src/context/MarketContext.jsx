@@ -59,7 +59,8 @@ export function MarketProvider({ children }) {
     tickMs: tickSpeed,
     volatilityMultiplier: volatility,
     driftBias: marketBias,
-    isPaused: feedMode === 'live' ? false : isPaused,
+    isPaused: isPaused,
+    isLiveMode: feedMode === 'live',
   });
 
   // Real-world market live feed hook
@@ -71,7 +72,7 @@ export function MarketProvider({ children }) {
     latencyMs,
     syncCount,
     syncNow,
-  } = useLiveMarketFeed({ enabled: feedMode === 'live', intervalMs: 3500 });
+  } = useLiveMarketFeed({ enabled: feedMode === 'live', intervalMs: 2000 });
 
   // Sync real-world market prices into simulator engine
   useEffect(() => {
@@ -416,11 +417,12 @@ export function MarketProvider({ children }) {
       localStorage.setItem('finpulse_feed_mode', mode);
     } catch (_) {}
     if (mode === 'live') {
+      syncNow();
       addAlert('🟢 Connected to Real Live Market Feeds (Yahoo, CoinGecko, ECB)', 'info');
     } else {
       addAlert('⚡ Switched to Local Simulator Sandbox', 'info');
     }
-  }, []);
+  }, [syncNow]);
 
   const liveFeedStatus = useMemo(() => ({
     feedState,

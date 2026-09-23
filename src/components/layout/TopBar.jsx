@@ -197,8 +197,11 @@ export default function TopBar() {
           <button
             type="button"
             className={`feed-toggle-btn ${feedMode === 'live' ? 'active-live' : ''}`}
-            onClick={() => setFeedMode('live')}
-            title={`Real Live Market API (Yahoo, CoinGecko, ECB) • Latency: ${liveFeedStatus.latencyMs}ms`}
+            onClick={() => {
+              setFeedMode('live');
+              liveFeedStatus?.syncNow?.();
+            }}
+            title={`Real Live Market API (Yahoo, CoinGecko, ECB) • Latency: ${liveFeedStatus.latencyMs}ms • Click to sync now`}
           >
             <span className={`live-status-dot ${feedMode === 'live' ? 'dot-pulse' : ''}`} />
             <span>LIVE API</span>
