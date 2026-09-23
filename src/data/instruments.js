@@ -28,8 +28,8 @@ export const INSTRUMENTS = {
     { id: 'USD/CHF', name: 'US Dollar / Swiss Franc',  price: 0.8920, vol: 0.004, sector: 'Forex', color: '#ffb347' },
   ],
   commodities: [
-    { id: 'XAU/USD', name: 'Gold (Spot / USD)', price: 4354.06, vol: 0.012, sector: 'Commodities', color: '#fbbf24' },
-    { id: 'XAG/USD', name: 'Silver (Spot / USD)', price: 51.53, vol: 0.022, sector: 'Commodities', color: '#cbd5e1' },
+    { id: 'XAU/USD', name: 'Gold (Spot / USD)', price: 4340.00, vol: 0.012, sector: 'Commodities', color: '#fbbf24' },
+    { id: 'XAG/USD', name: 'Silver (Spot / USD)', price: 51.36, vol: 0.022, sector: 'Commodities', color: '#cbd5e1' },
   ],
 };
 
