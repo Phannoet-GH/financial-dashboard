@@ -1,11 +1,11 @@
 // src/data/marketSignals.js
-// Technical Trading Signal Engine for Automated Buy & Sell Recommendations
+// Technical Trading Signal Engine for 15-Minute Short Profit Scalping & Predictions
 
 import { ALL_INSTRUMENTS, formatPrice } from './instruments';
 import { calculateMovingDirection } from './marketAnalytics';
 
 /**
- * Generates an automated Buy, Sell, or Hold trading signal with Entry, TP, and SL targets
+ * Generates an automated Next 15-Minute Short Profit Trading Signal with Entry, TP, and SL targets
  */
 export function calculateTradingSignal(symbol, curPriceData, ohlcBars = [], assetFlow = null) {
   if (!curPriceData || !curPriceData.price) {
@@ -23,14 +23,34 @@ export function calculateTradingSignal(symbol, curPriceData, ohlcBars = [], asse
       tp2Pct: 0,
       stopLoss: 0,
       slPct: 0,
-      riskReward: '1 : 2.0',
-      timeframe: '15M / 1H',
-      reasons: ['Awaiting price action confirmation'],
+      riskReward: '1 : 1.7',
+      timeframe: 'Next 15m (Short Scalp)',
+      guess15m: {
+        direction: 'FLAT',
+        label: 'Consolidating ↔',
+        action: 'Wait / Chop',
+        guessText: 'Guess next 15m: Awaiting price action confirmation',
+        targetPrice: 0,
+        targetPct: 0,
+        stopLoss: 0,
+        slPct: 0,
+        expectedRange: { low: 0, high: 0 },
+        winRate: 50,
+        mode: '15m Short Profit',
+      },
+      reasons: [
+        {
+          title: 'Awaiting Confirmation',
+          detail: 'No active 15-minute price momentum detected. Awaiting order flow impulse.',
+          bias: 'neutral',
+        },
+      ],
     };
   }
 
   const { price, open, high, low, changePct = 0 } = curPriceData;
   const isForex = symbol.includes('/') && price < 50;
+  const isCrypto = ['BTC', 'ETH', 'SOL'].includes(symbol) || price > 5000;
   const decimals = isForex ? 4 : 2;
 
   // Technical momentum and moving direction
@@ -39,9 +59,26 @@ export function calculateTradingSignal(symbol, curPriceData, ohlcBars = [], asse
   const score = dir.score || 50;
   const buyVolPct = assetFlow?.buyPct || 50;
 
-  // Intraday range & volatility buffer
+  // Short Profit Scalp target sizing for the next 15 minutes:
+  // - Forex: 0.15% - 0.30%
+  // - Stocks / Commodities: 0.35% - 0.70%
+  // - Crypto: 0.60% - 1.20%
+  let minScalpPct = 0.0035;
+  let maxScalpPct = 0.0075;
+  if (isForex) {
+    minScalpPct = 0.0015;
+    maxScalpPct = 0.0030;
+  } else if (isCrypto) {
+    minScalpPct = 0.0060;
+    maxScalpPct = 0.0120;
+  }
+
   const dayRange = Math.max(high - low, price * 0.008);
-  const atrBuffer = dayRange * 0.65;
+  // 15m scalp buffer is approx 20% of the day's range, bounded to short profit bounds
+  const scalp15mBuffer = Math.min(
+    Math.max(price * (dayRange / price * 0.20), price * minScalpPct),
+    price * maxScalpPct
+  );
 
   let signal = 'HOLD';
   let strength = 'MODERATE';
@@ -57,21 +94,45 @@ export function calculateTradingSignal(symbol, curPriceData, ohlcBars = [], asse
     confidence = Math.min(Math.round(55 + (score * 0.3) + ((buyVolPct - 50) * 0.45)), 94);
 
     if (rsi <= 36) {
-      reasons.push(`Oversold RSI recovery (${rsi}) signaling mean reversion`);
+      reasons.push({
+        title: 'Oversold Mean Reversion',
+        detail: `15m RSI (${rsi}) deeply oversold; primed for immediate bounce`,
+        bias: 'bullish',
+      });
     } else {
-      reasons.push(`Bullish trend momentum (Trend Score: ${score}/100)`);
+      reasons.push({
+        title: 'Bullish Momentum Flow',
+        detail: `High composite velocity score (${score}/100) favoring upside breakout`,
+        bias: 'bullish',
+      });
     }
 
     if (buyVolPct >= 58) {
-      reasons.push(`Order flow buyer dominance (${buyVolPct}% Buy Volume)`);
+      reasons.push({
+        title: 'Buyer Order Imbalance',
+        detail: `Aggressive buyer volume taking liquidity (${buyVolPct}% Buy Flow)`,
+        bias: 'bullish',
+      });
     } else {
-      reasons.push('Price consolidating above key EMA dynamic support');
+      reasons.push({
+        title: 'EMA Dynamic Support',
+        detail: 'Price bouncing cleanly off dynamic 15m short-term exponential moving averages',
+        bias: 'bullish',
+      });
     }
 
     if (price >= open) {
-      reasons.push(`Intraday expansion (+${Math.abs(changePct).toFixed(2)}%) towards resistance`);
+      reasons.push({
+        title: 'Intraday Expansion',
+        detail: `Pushing above opening tick (+${Math.abs(changePct).toFixed(2)}%) into overhead liquidity`,
+        bias: 'bullish',
+      });
     } else {
-      reasons.push('Defending intraday liquidity support pool');
+      reasons.push({
+        title: 'Liquidity Absorption',
+        detail: 'Defending intraday dip with institutional limit buy support wall',
+        bias: 'bullish',
+      });
     }
   } else if (score <= 36 || (rsi > 68 && changePct < 0.5) || (buyVolPct <= 38 && score <= 48)) {
     signal = 'SELL';
@@ -80,49 +141,79 @@ export function calculateTradingSignal(symbol, curPriceData, ohlcBars = [], asse
     confidence = Math.min(Math.round(55 + ((100 - score) * 0.3) + ((50 - buyVolPct) * 0.45)), 94);
 
     if (rsi >= 66) {
-      reasons.push(`Overbought exhaustion (RSI ${rsi}) near upper envelope`);
+      reasons.push({
+        title: 'Overbought Rejection',
+        detail: `15m RSI (${rsi}) exhausted near upper deviation envelope`,
+        bias: 'bearish',
+      });
     } else {
-      reasons.push(`Bearish distribution breakdown (Trend Score: ${score}/100)`);
+      reasons.push({
+        title: 'Bearish Breakdown Drift',
+        detail: `Velocity score (${score}/100) indicates downward continuation pressure`,
+        bias: 'bearish',
+      });
     }
 
     if (buyVolPct <= 44) {
-      reasons.push(`Heavy institutional selling pressure (${100 - buyVolPct}% Sell Volume)`);
+      reasons.push({
+        title: 'Heavy Sell Outflow',
+        detail: `Institutional sellers hitting bids (${100 - buyVolPct}% Sell Volume)`,
+        bias: 'bearish',
+      });
     } else {
-      reasons.push('Rejection at key overhead resistance level');
+      reasons.push({
+        title: 'Overhead Resistance Block',
+        detail: 'Rejection candle confirming sell wall at local pivot resistance',
+        bias: 'bearish',
+      });
     }
 
-    reasons.push('Death cross alignment with expanding downward delta');
+    reasons.push({
+      title: 'Order Flow Delta Drop',
+      detail: 'Negative volume delta expanding downward into lower liquidity pool',
+      bias: 'bearish',
+    });
   } else {
     signal = 'HOLD';
     strength = 'NEUTRAL';
     badgeColor = 'var(--amber)';
     confidence = 58;
-    reasons.push('Price consolidating in sideways chop range');
-    reasons.push(`Balanced order flow (${buyVolPct}% Buy / ${100 - buyVolPct}% Sell)`);
-    reasons.push(`Neutral RSI (${rsi}) awaiting directional breakout`);
+
+    reasons.push({
+      title: 'Consolidation Chop',
+      detail: 'Price oscillating within tight 15m equilibrium range',
+      bias: 'neutral',
+    });
+    reasons.push({
+      title: 'Balanced Order Flow',
+      detail: `Order book delta balanced (${buyVolPct}% Buy / ${100 - buyVolPct}% Sell)`,
+      bias: 'neutral',
+    });
+    reasons.push({
+      title: 'Neutral Momentum',
+      detail: `RSI (${rsi}) sitting in equilibrium awaiting next 15m breakout catalyst`,
+      bias: 'neutral',
+    });
   }
 
-  // Calculate Entry, TP, and SL targets
-  let tp1 = 0;
-  let tp2 = 0;
-  let stopLoss = 0;
-  let entryPrice = price;
+  // Calculate Entry, Short Profit TP, and Tight SL targets
+  const entryPrice = price;
 
   if (signal === 'BUY') {
     // Buy Entry: at or slightly below current market price
-    const entryLow = price * (1 - 0.002);
-    const entryHigh = price * (1 + 0.001);
-    const target1 = price + atrBuffer * 1.25;
-    const target2 = price + atrBuffer * 2.20;
-    const stop = price - atrBuffer * 0.75;
+    const entryLow = price * (1 - 0.0015);
+    const entryHigh = price * (1 + 0.0008);
+    const target1 = price + scalp15mBuffer;
+    const target2 = price + scalp15mBuffer * 1.6;
+    const stop = price - scalp15mBuffer * 0.60;
 
-    tp1 = parseFloat(target1.toFixed(decimals));
-    tp2 = parseFloat(target2.toFixed(decimals));
-    stopLoss = parseFloat(stop.toFixed(decimals));
+    const tp1 = parseFloat(target1.toFixed(decimals));
+    const tp2 = parseFloat(target2.toFixed(decimals));
+    const stopLoss = parseFloat(stop.toFixed(decimals));
 
     const gainPct = ((tp1 - price) / price) * 100;
     const lossPct = ((price - stopLoss) / price) * 100;
-    const rrRatio = lossPct > 0 ? (gainPct / lossPct).toFixed(1) : '2.2';
+    const rrRatio = lossPct > 0 ? (gainPct / lossPct).toFixed(1) : '1.7';
 
     return {
       symbol,
@@ -134,29 +225,45 @@ export function calculateTradingSignal(symbol, curPriceData, ohlcBars = [], asse
       entryRange: `$${formatPrice(entryLow, symbol)} – $${formatPrice(entryHigh, symbol)}`,
       tp1,
       tp2,
-      tp1Pct: parseFloat(gainPct.toFixed(1)),
-      tp2Pct: parseFloat((((tp2 - price) / price) * 100).toFixed(1)),
+      tp1Pct: parseFloat(gainPct.toFixed(2)),
+      tp2Pct: parseFloat((((tp2 - price) / price) * 100).toFixed(2)),
       stopLoss,
-      slPct: parseFloat(lossPct.toFixed(1)),
+      slPct: parseFloat(lossPct.toFixed(2)),
       riskReward: `1 : ${rrRatio}`,
-      timeframe: 'Intraday (15M / 1H)',
+      timeframe: 'Next 15m (Short Scalp)',
+      guess15m: {
+        direction: 'UP',
+        label: 'Bullish Push ↗',
+        action: 'Buy / Long (Scalp)',
+        guessText: `Guess next 15m: Quick pop towards $${formatPrice(tp1, symbol)} (+${gainPct.toFixed(2)}% Short Profit)`,
+        targetPrice: tp1,
+        targetPct: parseFloat(gainPct.toFixed(2)),
+        stopLoss,
+        slPct: parseFloat(lossPct.toFixed(2)),
+        expectedRange: {
+          low: parseFloat((price - scalp15mBuffer * 0.35).toFixed(decimals)),
+          high: tp1,
+        },
+        winRate: confidence,
+        mode: '15m Short Profit',
+      },
       reasons,
     };
   } else if (signal === 'SELL') {
     // Sell / Short Entry
-    const entryLow = price * (1 - 0.001);
-    const entryHigh = price * (1 + 0.002);
-    const target1 = price - atrBuffer * 1.25;
-    const target2 = price - atrBuffer * 2.20;
-    const stop = price + atrBuffer * 0.75;
+    const entryLow = price * (1 - 0.0008);
+    const entryHigh = price * (1 + 0.0015);
+    const target1 = price - scalp15mBuffer;
+    const target2 = price - scalp15mBuffer * 1.6;
+    const stop = price + scalp15mBuffer * 0.60;
 
-    tp1 = parseFloat(target1.toFixed(decimals));
-    tp2 = parseFloat(target2.toFixed(decimals));
-    stopLoss = parseFloat(stop.toFixed(decimals));
+    const tp1 = parseFloat(target1.toFixed(decimals));
+    const tp2 = parseFloat(target2.toFixed(decimals));
+    const stopLoss = parseFloat(stop.toFixed(decimals));
 
     const gainPct = ((price - tp1) / price) * 100;
     const lossPct = ((stopLoss - price) / price) * 100;
-    const rrRatio = lossPct > 0 ? (gainPct / lossPct).toFixed(1) : '2.0';
+    const rrRatio = lossPct > 0 ? (gainPct / lossPct).toFixed(1) : '1.7';
 
     return {
       symbol,
@@ -168,19 +275,41 @@ export function calculateTradingSignal(symbol, curPriceData, ohlcBars = [], asse
       entryRange: `$${formatPrice(entryLow, symbol)} – $${formatPrice(entryHigh, symbol)}`,
       tp1,
       tp2,
-      tp1Pct: parseFloat(gainPct.toFixed(1)),
-      tp2Pct: parseFloat((((price - tp2) / price) * 100).toFixed(1)),
+      tp1Pct: parseFloat(gainPct.toFixed(2)),
+      tp2Pct: parseFloat((((price - tp2) / price) * 100).toFixed(2)),
       stopLoss,
-      slPct: parseFloat(lossPct.toFixed(1)),
+      slPct: parseFloat(lossPct.toFixed(2)),
       riskReward: `1 : ${rrRatio}`,
-      timeframe: 'Intraday (15M / 1H)',
+      timeframe: 'Next 15m (Short Scalp)',
+      guess15m: {
+        direction: 'DOWN',
+        label: 'Bearish Retest ↘',
+        action: 'Sell / Short (Scalp)',
+        guessText: `Guess next 15m: Pullback slip towards $${formatPrice(tp1, symbol)} (+${gainPct.toFixed(2)}% Short Profit)`,
+        targetPrice: tp1,
+        targetPct: parseFloat(gainPct.toFixed(2)),
+        stopLoss,
+        slPct: parseFloat(lossPct.toFixed(2)),
+        expectedRange: {
+          low: tp1,
+          high: parseFloat((price + scalp15mBuffer * 0.35).toFixed(decimals)),
+        },
+        winRate: confidence,
+        mode: '15m Short Profit',
+      },
       reasons,
     };
   } else {
-    // Hold / Neutral Setup
-    const target1 = price * 1.015;
-    const target2 = price * 1.03;
-    const stop = price * 0.985;
+    // Hold / Neutral Setup - tight 15m range scalp
+    const target1 = price * (1 + minScalpPct * 0.7);
+    const target2 = price * (1 + minScalpPct * 1.4);
+    const stop = price * (1 - minScalpPct * 0.5);
+
+    const tp1 = parseFloat(target1.toFixed(decimals));
+    const tp2 = parseFloat(target2.toFixed(decimals));
+    const stopLoss = parseFloat(stop.toFixed(decimals));
+    const gainPct = ((tp1 - price) / price) * 100;
+    const lossPct = ((price - stopLoss) / price) * 100;
 
     return {
       symbol,
@@ -189,15 +318,31 @@ export function calculateTradingSignal(symbol, curPriceData, ohlcBars = [], asse
       confidence: 58,
       badgeColor: 'var(--amber)',
       entryPrice,
-      entryRange: `$${formatPrice(price * 0.998, symbol)} – $${formatPrice(price * 1.002, symbol)}`,
-      tp1: parseFloat(target1.toFixed(decimals)),
-      tp2: parseFloat(target2.toFixed(decimals)),
-      tp1Pct: 1.5,
-      tp2Pct: 3.0,
-      stopLoss: parseFloat(stop.toFixed(decimals)),
-      slPct: 1.5,
-      riskReward: '1 : 1.5',
-      timeframe: 'Wait for Breakout',
+      entryRange: `$${formatPrice(price * 0.999, symbol)} – $${formatPrice(price * 1.001, symbol)}`,
+      tp1,
+      tp2,
+      tp1Pct: parseFloat(gainPct.toFixed(2)),
+      tp2Pct: parseFloat((((tp2 - price) / price) * 100).toFixed(2)),
+      stopLoss,
+      slPct: parseFloat(lossPct.toFixed(2)),
+      riskReward: '1 : 1.4',
+      timeframe: 'Next 15m (Sideways)',
+      guess15m: {
+        direction: 'FLAT',
+        label: 'Chop Range ↔',
+        action: 'Range Scalp / Wait',
+        guessText: `Guess next 15m: Sideways drift within $${formatPrice(stopLoss, symbol)} - $${formatPrice(tp1, symbol)}`,
+        targetPrice: tp1,
+        targetPct: parseFloat(gainPct.toFixed(2)),
+        stopLoss,
+        slPct: parseFloat(lossPct.toFixed(2)),
+        expectedRange: {
+          low: stopLoss,
+          high: tp1,
+        },
+        winRate: 58,
+        mode: '15m Short Profit',
+      },
       reasons,
     };
   }

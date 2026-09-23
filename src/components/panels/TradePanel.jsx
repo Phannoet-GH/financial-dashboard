@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useMarket } from '../../context/MarketContext';
 import { ALL_INSTRUMENTS, formatPrice, getUnitLabel } from '../../data/instruments';
 import { calculateTradingSignal } from '../../data/marketSignals';
-import { Zap, ShieldCheck } from 'lucide-react';
+import { Zap, ShieldCheck, Target, Clock } from 'lucide-react';
 import './TradePanel.css';
 
 export default function TradePanel() {
@@ -54,20 +54,36 @@ export default function TradePanel() {
   // Estimated TP / SL profit
   const tpNum = parseFloat(takeProfit);
   const slNum = parseFloat(stopLoss);
-  const estTpProfit = p && tpNum > p.price ? (tpNum - p.price) * qtyN : 0;
-  const estTpPct = p && tpNum > p.price ? ((tpNum - p.price) / p.price * 100).toFixed(1) : null;
-  const estSlLoss = p && slNum && slNum < p.price ? (p.price - slNum) * qtyN : 0;
-  const estSlPct = p && slNum && slNum < p.price ? ((p.price - slNum) / p.price * 100).toFixed(1) : null;
+  const estTpProfit = p && tpNum
+    ? side === 'buy'
+      ? tpNum > p.price ? (tpNum - p.price) * qtyN : 0
+      : tpNum < p.price ? (p.price - tpNum) * qtyN : 0
+    : 0;
+  const estTpPct = p && tpNum
+    ? side === 'buy'
+      ? tpNum > p.price ? ((tpNum - p.price) / p.price * 100).toFixed(2) : null
+      : tpNum < p.price ? ((p.price - tpNum) / p.price * 100).toFixed(2) : null
+    : null;
+  const estSlLoss = p && slNum
+    ? side === 'buy'
+      ? slNum < p.price ? (p.price - slNum) * qtyN : 0
+      : slNum > p.price ? (slNum - p.price) * qtyN : 0
+    : 0;
+  const estSlPct = p && slNum
+    ? side === 'buy'
+      ? slNum < p.price ? ((p.price - slNum) / p.price * 100).toFixed(2) : null
+      : slNum > p.price ? ((slNum - p.price) / p.price * 100).toFixed(2) : null
+    : null;
 
   function setTpPreset(pct) {
     if (!p) return;
-    const target = p.price * (1 + pct / 100);
+    const target = side === 'buy' ? p.price * (1 + pct / 100) : p.price * (1 - pct / 100);
     setTakeProfit(target.toFixed(selectedSymbol.includes('/') ? 4 : 2));
   }
 
   function setSlPreset(pct) {
     if (!p) return;
-    const target = p.price * (1 - pct / 100);
+    const target = side === 'buy' ? p.price * (1 - pct / 100) : p.price * (1 + pct / 100);
     setStopLoss(target.toFixed(selectedSymbol.includes('/') ? 4 : 2));
   }
 
@@ -118,7 +134,7 @@ export default function TradePanel() {
 
     setStatus({
       ok: true,
-      msg: `Applied ${sig.signal} Signal (TP: $${sig.tp1} | SL: $${sig.stopLoss})`
+      msg: `Applied 15m Scalp: ${sig.signal} on ${selectedSymbol} (Short TP: $${sig.tp1} | SL: $${sig.stopLoss})`
     });
     setTimeout(() => setStatus(null), 3500);
   }, [selectedSymbol]);
@@ -328,12 +344,12 @@ export default function TradePanel() {
             </div>
           )}
 
-          {/* Smart Signal Confluence Assistant */}
+          {/* Smart Signal Confluence Assistant - Next 15m Short Profit */}
           {currentSignal && (
             <div className={`trade-signal-card signal-border-${currentSignal.signal.toLowerCase()}`}>
               <div className="trade-signal-header">
                 <div className="trade-signal-title">
-                  <Zap
+                  <Target
                     size={14}
                     style={{
                       color:
@@ -344,7 +360,7 @@ export default function TradePanel() {
                           : 'var(--amber)',
                     }}
                   />
-                  <span className="fw-700">Algorithmic Signal</span>
+                  <span className="fw-700">15m Scalp Engine</span>
                   <span
                     className={`badge ${
                       currentSignal.signal === 'BUY'
@@ -354,7 +370,7 @@ export default function TradePanel() {
                         : 'badge-amber'
                     }`}
                   >
-                    {currentSignal.strength}
+                    {currentSignal.guess15m?.label || currentSignal.strength}
                   </span>
                 </div>
                 <span className="trade-signal-conf">
@@ -362,6 +378,13 @@ export default function TradePanel() {
                   {currentSignal.confidence}% Conf.
                 </span>
               </div>
+
+              {currentSignal.guess15m?.guessText && (
+                <div className="trade-signal-guess-banner">
+                  <Clock size={11} className="text-cyan" />
+                  <span>{currentSignal.guess15m.guessText}</span>
+                </div>
+              )}
 
               <div className="trade-signal-grid">
                 <div className="trade-signal-col">
@@ -371,14 +394,14 @@ export default function TradePanel() {
                   </span>
                 </div>
                 <div className="trade-signal-col">
-                  <span className="signal-label">Target TP1</span>
+                  <span className="signal-label">Short TP</span>
                   <span className="signal-value text-mono text-green">
                     ${formatPrice(currentSignal.tp1, selectedSymbol)}
                     <small> (+{currentSignal.tp1Pct}%)</small>
                   </span>
                 </div>
                 <div className="trade-signal-col">
-                  <span className="signal-label">Stop Loss</span>
+                  <span className="signal-label">Tight SL</span>
                   <span className="signal-value text-mono text-red">
                     ${formatPrice(currentSignal.stopLoss, selectedSymbol)}
                     <small> ({currentSignal.slPct}%)</small>
@@ -387,7 +410,7 @@ export default function TradePanel() {
                 <div className="trade-signal-col">
                   <span className="signal-label">Risk : Reward</span>
                   <span className="signal-value text-mono text-cyan">
-                    1:{currentSignal.riskReward}
+                    {currentSignal.riskReward}
                   </span>
                 </div>
               </div>
@@ -396,7 +419,8 @@ export default function TradePanel() {
                 <div className="trade-signal-rationale">
                   <span className="rationale-dot" />
                   <span>
-                    <strong>{currentSignal.reasons[0].title}:</strong> {currentSignal.reasons[0].detail}
+                    <strong>{typeof currentSignal.reasons[0] === 'object' ? currentSignal.reasons[0].title : 'Confluence'}:</strong>{' '}
+                    {typeof currentSignal.reasons[0] === 'object' ? currentSignal.reasons[0].detail : currentSignal.reasons[0]}
                   </span>
                 </div>
               )}
@@ -407,7 +431,7 @@ export default function TradePanel() {
                 onClick={() => applySignalValues(currentSignal)}
               >
                 <Zap size={13} />
-                <span>Apply Signal Levels (Side, TP & SL)</span>
+                <span>Apply 15m Short Profit Target (TP & SL)</span>
               </button>
             </div>
           )}
@@ -508,74 +532,74 @@ export default function TradePanel() {
           </div>
 
           {/* Take Profit & Stop Loss Section */}
-          {side === 'buy' && (
-            <div className="tpsl-container">
-              <div className="tpsl-header" onClick={() => setEnableTpSl(v => !v)}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input
-                    type="checkbox"
-                    checked={enableTpSl}
-                    onChange={e => setEnableTpSl(e.target.checked)}
-                    onClick={e => e.stopPropagation()}
-                  />
-                  <span className="form-label" style={{ cursor: 'pointer', margin: 0, color: enableTpSl ? 'var(--cyan)' : 'var(--text-secondary)' }}>
-                    Bracket TP & SL Orders
-                  </span>
-                </div>
-                <span className="text-xs text-muted">{enableTpSl ? 'Active' : 'Optional'}</span>
+          <div className="tpsl-container">
+            <div className="tpsl-header" onClick={() => setEnableTpSl(v => !v)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={enableTpSl}
+                  onChange={e => setEnableTpSl(e.target.checked)}
+                  onClick={e => e.stopPropagation()}
+                />
+                <span className="form-label" style={{ cursor: 'pointer', margin: 0, color: enableTpSl ? 'var(--cyan)' : 'var(--text-secondary)' }}>
+                  Bracket TP & SL Orders
+                </span>
               </div>
+              <span className="text-xs text-muted">{enableTpSl ? 'Active' : 'Optional'}</span>
+            </div>
 
-              {enableTpSl && (
-                <div className="tpsl-body animate-fade-in">
-                  <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label className="form-label" style={{ color: 'var(--green)' }}>Take Profit (TP)</label>
-                      {estTpPct && <span className="text-mono text-xs" style={{ color: 'var(--green)' }}>+{estTpPct}% (+${estTpProfit.toFixed(2)})</span>}
-                    </div>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0.0001"
-                      className="input"
-                      placeholder="Target exit price"
-                      value={takeProfit}
-                      onChange={e => setTakeProfit(e.target.value)}
-                    />
-                    <div className="qty-presets">
-                      {[5, 10, 20, 50].map(pct => (
-                        <button key={pct} type="button" className="btn btn-ghost preset-btn-green" onClick={() => setTpPreset(pct)}>
-                          +{pct}%
-                        </button>
-                      ))}
-                    </div>
+            {enableTpSl && (
+              <div className="tpsl-body animate-fade-in">
+                <div className="form-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className="form-label" style={{ color: 'var(--green)' }}>Take Profit (TP)</label>
+                    {estTpPct && <span className="text-mono text-xs" style={{ color: 'var(--green)' }}>+{estTpPct}% (+${estTpProfit.toFixed(2)})</span>}
                   </div>
-
-                  <div className="form-group" style={{ marginTop: 6 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label className="form-label" style={{ color: 'var(--red)' }}>Stop Loss (SL)</label>
-                      {estSlPct && <span className="text-mono text-xs" style={{ color: 'var(--red)' }}>-{estSlPct}% (-${estSlLoss.toFixed(2)})</span>}
-                    </div>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0.0001"
-                      className="input"
-                      placeholder="Stop limit price"
-                      value={stopLoss}
-                      onChange={e => setStopLoss(e.target.value)}
-                    />
-                    <div className="qty-presets">
-                      {[3, 5, 10].map(pct => (
-                        <button key={pct} type="button" className="btn btn-ghost preset-btn-red" onClick={() => setSlPreset(pct)}>
-                          -{pct}%
-                        </button>
-                      ))}
-                    </div>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0.0001"
+                    className="input"
+                    placeholder="Target exit price"
+                    value={takeProfit}
+                    onChange={e => setTakeProfit(e.target.value)}
+                  />
+                  <div className="qty-presets">
+                    {[0.3, 0.5, 0.8, 1.5].map(pct => (
+                      <button key={pct} type="button" className="btn btn-ghost preset-btn-green" onClick={() => setTpPreset(pct)}>
+                        +{pct}%
+                      </button>
+                    ))}
+                    <span className="preset-mode-tag" title="Short Profit 15m Target">Short Profit</span>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+
+                <div className="form-group" style={{ marginTop: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className="form-label" style={{ color: 'var(--red)' }}>Stop Loss (SL)</label>
+                    {estSlPct && <span className="text-mono text-xs" style={{ color: 'var(--red)' }}>-{estSlPct}% (-${estSlLoss.toFixed(2)})</span>}
+                  </div>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0.0001"
+                    className="input"
+                    placeholder="Stop limit price"
+                    value={stopLoss}
+                    onChange={e => setStopLoss(e.target.value)}
+                  />
+                  <div className="qty-presets">
+                    {[0.25, 0.5, 0.8].map(pct => (
+                      <button key={pct} type="button" className="btn btn-ghost preset-btn-red" onClick={() => setSlPreset(pct)}>
+                        -{pct}%
+                      </button>
+                    ))}
+                    <span className="preset-mode-tag" title="Tight Scalp Stop Loss">Tight SL</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Order Financial Summary */}
           {qtyN > 0 && p && (

@@ -5,7 +5,7 @@ import { useMarket } from '../../context/MarketContext';
 import { ALL_INSTRUMENTS, formatPrice } from '../../data/instruments';
 import { calculateMovingDirection } from '../../data/marketAnalytics';
 import { calculateTradingSignal } from '../../data/marketSignals';
-import { Compass, Zap, ShieldCheck, ChevronDown, ChevronUp, Bell, Radio, Check } from 'lucide-react';
+import { Compass, Zap, ShieldCheck, ChevronDown, ChevronUp, Bell, Radio, Check, Clock, Target } from 'lucide-react';
 import './CandlestickChart.css';
 
 const INTERVALS = ['1m', '5m', '15m', '1h'];
@@ -30,6 +30,24 @@ export default function CandlestickChart() {
   const [interval, setInterval_] = useState('1m');
   const [ohlc, setOhlc] = useState(null);
   const [showReasons, setShowReasons] = useState(false);
+
+  // Live 15-Minute Candle Countdown Timer
+  const [timeRemaining15m, setTimeRemaining15m] = useState(() => {
+    const now = new Date();
+    const mins = 14 - (now.getMinutes() % 15);
+    const secs = 59 - now.getSeconds();
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const mins = 14 - (now.getMinutes() % 15);
+      const secs = 59 - now.getSeconds();
+      setTimeRemaining15m(`${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Live Historical Candles state from real public APIs
   const [liveCandles, setLiveCandles] = useState(null);
@@ -359,24 +377,29 @@ export default function CandlestickChart() {
             {INTERVALS.map(iv => (
               <button
                 key={iv}
-                className={`tab-item${interval === iv ? ' active' : ''}`}
+                className={`tab-item${interval === iv ? ' active' : ''}${iv === '15m' ? ' tab-item-15m' : ''}`}
                 onClick={() => handleIntervalChange(iv)}
                 title={`Switch to ${iv} candlestick timeframe`}
               >
                 {iv}
+                {iv === '15m' && <span className="tab-15m-dot" title="15m Scalp Focus" />}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Trading Signal Ribbon */}
+      {/* Trading Signal Ribbon - Next 15m Short Profit Scalp */}
       {currentSignal && (
         <div className={`chart-signal-banner signal-${currentSignal.signal.toLowerCase()}`}>
           <div className="signal-banner-left">
             <span className={`signal-badge badge-${currentSignal.signal.toLowerCase()}`}>
               <Zap size={13} />
               {currentSignal.strength}
+            </span>
+            <span className="signal-guess-tag" title={currentSignal.guess15m?.guessText || 'Next 15m Guess'}>
+              <Target size={12} className="text-cyan" />
+              <strong className="text-white">15M GUESS:</strong> {currentSignal.guess15m?.label || currentSignal.signal}
             </span>
             <span className="signal-confidence" title="Algorithmic confluence confidence score">
               <ShieldCheck size={13} />
@@ -389,14 +412,14 @@ export default function CandlestickChart() {
               </span>
             </div>
             <div className="signal-metric-group">
-              <span className="metric-label">TP:</span>
+              <span className="metric-label">Short TP:</span>
               <span className="metric-val text-mono text-green">
                 ${formatPrice(currentSignal.tp1, selectedSymbol)}
                 <span className="metric-sub"> (+{currentSignal.tp1Pct}%)</span>
               </span>
             </div>
             <div className="signal-metric-group">
-              <span className="metric-label">SL:</span>
+              <span className="metric-label">Tight SL:</span>
               <span className="metric-val text-mono text-red">
                 ${formatPrice(currentSignal.stopLoss, selectedSymbol)}
                 <span className="metric-sub"> ({currentSignal.slPct}%)</span>
@@ -405,8 +428,12 @@ export default function CandlestickChart() {
             <div className="signal-metric-group r-r-group">
               <span className="metric-label">R:R:</span>
               <span className="metric-val text-mono text-cyan">
-                1:{currentSignal.riskReward}
+                {currentSignal.riskReward}
               </span>
+            </div>
+            <div className="signal-timer-badge" title="Time remaining in current 15m candle bar">
+              <Clock size={11} className="text-cyan" />
+              <span>15m Bar: <strong className="text-mono text-cyan">{timeRemaining15m}</strong></span>
             </div>
           </div>
 
@@ -424,9 +451,10 @@ export default function CandlestickChart() {
               type="button"
               className="btn-apply-signal"
               onClick={() => applySignalToTrade(currentSignal)}
-              title="Pre-fill trade order with these entry, TP and SL targets"
+              title="Pre-fill trade order with 15m short profit TP and SL targets"
             >
-              Apply to Order
+              <Zap size={12} />
+              <span>Apply 15m Scalp</span>
             </button>
           </div>
         </div>
@@ -436,16 +464,33 @@ export default function CandlestickChart() {
       {currentSignal && showReasons && (
         <div className="signal-reasons-drawer animate-fade-in">
           <div className="reasons-header">
-            <span>Algorithmic Confluence Analysis ({selectedSymbol})</span>
-            <span className="reasons-timeframe text-muted">{currentSignal.timeframe}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>Algorithmic 15m Scalp Confluence ({selectedSymbol})</span>
+              <span className="badge badge-cyan" style={{ fontSize: 10 }}>SHORT PROFIT SCALP</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span className="text-xs text-muted">15m Window: <b className="text-mono text-cyan">{timeRemaining15m}</b> remaining</span>
+              <span className="reasons-timeframe text-muted">{currentSignal.timeframe}</span>
+            </div>
           </div>
+          {currentSignal.guess15m?.guessText && (
+            <div className="reasons-prediction-banner">
+              <Target size={14} className="text-cyan" />
+              <span><strong>Prediction:</strong> {currentSignal.guess15m.guessText}</span>
+            </div>
+          )}
           <div className="reasons-grid">
-            {currentSignal.reasons?.map((r, i) => (
-              <div key={i} className={`reason-card bias-${r.bias}`}>
-                <div className="reason-title">{r.title}</div>
-                <div className="reason-detail">{r.detail}</div>
-              </div>
-            ))}
+            {currentSignal.reasons?.map((r, i) => {
+              const title = typeof r === 'object' ? r.title : `Confluence ${i + 1}`;
+              const detail = typeof r === 'object' ? r.detail : r;
+              const bias = typeof r === 'object' ? r.bias : 'neutral';
+              return (
+                <div key={i} className={`reason-card bias-${bias}`}>
+                  <div className="reason-title">{title}</div>
+                  <div className="reason-detail">{detail}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

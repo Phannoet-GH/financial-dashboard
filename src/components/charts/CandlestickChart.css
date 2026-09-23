@@ -332,6 +332,58 @@
   line-height: 1.4;
 }
 
+/* 15m Scalp Tag & Countdown Timer */
+.signal-guess-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 212, 255, 0.12);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--cyan);
+}
+
+.signal-timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.tab-item-15m {
+  position: relative;
+}
+
+.tab-15m-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  background: var(--cyan);
+  border-radius: 50%;
+  margin-left: 3px;
+  box-shadow: 0 0 6px var(--cyan);
+}
+
+.reasons-prediction-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  font-size: 11px;
+  color: #fff;
+}
+
 .chart-container {
   flex: 1; min-height: 0; width: 100%;
 }
+

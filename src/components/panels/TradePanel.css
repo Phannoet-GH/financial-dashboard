@@ -353,3 +353,32 @@
   box-shadow: 0 0 12px rgba(0, 212, 255, 0.25);
 }
 
+.trade-signal-guess-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  font-size: 11px;
+  color: #fff;
+  font-weight: 500;
+}
+
+.preset-mode-tag {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--cyan);
+  background: rgba(0, 212, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 212, 255, 0.25);
+}
+
+

@@ -146,7 +146,7 @@ export function MarketProvider({ children }) {
     setSelectedSymbol(signal.symbol);
     setTradeSignalPrefill(signal);
     navigateTo('markets', signal.symbol);
-    addAlert(`🎯 Applied ${signal.signal} Signal for ${signal.symbol} (TP: $${signal.tp1} | SL: $${signal.stopLoss})`, 'info');
+    addAlert(`🎯 Applied 15m Scalp for ${signal.symbol}: ${signal.signal} (Short TP: $${signal.tp1} | SL: $${signal.stopLoss})`, 'info');
   }, [navigateTo]);
 
   // Price Triggers Engine & Active Toast Notification State

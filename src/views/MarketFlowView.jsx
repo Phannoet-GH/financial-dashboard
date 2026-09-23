@@ -259,14 +259,14 @@ export default function MarketFlowView() {
             </div>
           </div>
 
-          {/* Live Algorithmic Trading Signals Radar */}
+          {/* Live Algorithmic Trading Signals Radar - 15m Short Profit */}
           <div className="glass-card flow-card signals-radar-card">
             <div className="card-header-clean" style={{ flexWrap: 'wrap', gap: 12 }}>
               <div className="card-header-title">
                 <Target size={16} className="text-cyan" />
                 <span>Live Algorithmic Trading Signals Radar</span>
                 <span className="badge badge-cyan" style={{ fontSize: 10 }}>
-                  MULTI-CONFLUENCE
+                  NEXT 15M SHORT PROFIT
                 </span>
               </div>
 
@@ -323,6 +323,17 @@ export default function MarketFlowView() {
 
                       <div className="radar-signal-badge-wrap">
                         <span
+                          className="badge"
+                          style={{
+                            background: 'rgba(0, 212, 255, 0.12)',
+                            color: 'var(--cyan)',
+                            border: '1px solid rgba(0, 212, 255, 0.3)',
+                            fontSize: 10,
+                          }}
+                        >
+                          15M: {sig.guess15m?.direction === 'UP' ? '↗ Bull' : sig.guess15m?.direction === 'DOWN' ? '↘ Bear' : '↔ Chop'}
+                        </span>
+                        <span
                           className={`badge ${
                             isBuy ? 'badge-green' : isSell ? 'badge-red' : 'badge-amber'
                           }`}
@@ -346,14 +357,14 @@ export default function MarketFlowView() {
                         </span>
                       </div>
                       <div className="radar-level-col">
-                        <span className="level-lbl">TARGET (TP)</span>
+                        <span className="level-lbl">SHORT TP (15M)</span>
                         <span className="level-val text-mono text-green">
                           ${formatPrice(sig.tp1, sig.symbol)}
                           <small> (+{sig.tp1Pct}%)</small>
                         </span>
                       </div>
                       <div className="radar-level-col">
-                        <span className="level-lbl">STOP LOSS (SL)</span>
+                        <span className="level-lbl">TIGHT SL</span>
                         <span className="level-val text-mono text-red">
                           ${formatPrice(sig.stopLoss, sig.symbol)}
                           <small> ({sig.slPct}%)</small>
@@ -362,7 +373,7 @@ export default function MarketFlowView() {
                       <div className="radar-level-col">
                         <span className="level-lbl">RISK/REWARD</span>
                         <span className="level-val text-mono text-cyan">
-                          1:{sig.riskReward}
+                          {sig.riskReward}
                         </span>
                       </div>
                     </div>
@@ -372,7 +383,8 @@ export default function MarketFlowView() {
                       <div className="radar-reason-text text-xs text-muted">
                         <span className="radar-reason-dot" />
                         <span>
-                          <strong>{sig.reasons[0].title}:</strong> {sig.reasons[0].detail}
+                          <strong>{typeof sig.reasons[0] === 'object' ? sig.reasons[0].title : 'Confluence'}:</strong>{' '}
+                          {typeof sig.reasons[0] === 'object' ? sig.reasons[0].detail : sig.reasons[0]}
                         </span>
                       </div>
                     )}
@@ -383,7 +395,7 @@ export default function MarketFlowView() {
                         type="button"
                         className="btn-radar-chart"
                         onClick={() => navigateTo('markets', sig.symbol)}
-                        title={`Inspect ${sig.symbol} Chart`}
+                        title={`Inspect ${sig.symbol} 15m Chart`}
                       >
                         Chart <ArrowUpRight size={12} />
                       </button>
@@ -391,10 +403,10 @@ export default function MarketFlowView() {
                         type="button"
                         className="btn-radar-trade"
                         onClick={() => applySignalToTrade(sig)}
-                        title={`Execute ${sig.signal} on ${sig.symbol}`}
+                        title={`Execute 15m Scalp on ${sig.symbol}`}
                       >
                         <Zap size={12} />
-                        <span>Trade Signal</span>
+                        <span>Trade 15m Scalp</span>
                       </button>
                     </div>
                   </div>
