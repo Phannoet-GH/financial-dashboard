@@ -80,11 +80,17 @@ export default function CandlestickChart() {
       rightPriceScale: {
         borderColor: 'rgba(255,255,255,0.06)',
         textColor:   '#8896b0',
+        autoScale:   true,
+        scaleMargins: {
+          top: 0.15,
+          bottom: 0.2,
+        },
       },
       timeScale: {
         borderColor:     'rgba(255,255,255,0.06)',
         timeVisible:     true,
         secondsVisible:  false,
+        rightOffset:     6,
       },
       handleScroll: true,
       handleScale:  true,
